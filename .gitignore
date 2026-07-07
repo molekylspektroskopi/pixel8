@@ -1,0 +1,14 @@
+# Generated at build time from settings.html
+src/pkjs/settings-html.js
+
+# Build artifacts
+build/
+*.pbw
+.lock-waf_linux_build
+
+# Private calendar config (contains your iCal URL) — copy from the .example
+src/pkjs/calendar_config.js
+
+# Node / Python
+node_modules/
+__pycache__/

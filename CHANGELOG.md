@@ -1,0 +1,92 @@
+# Changelog
+
+## v3.20.2
+- Optimization pass: wallpaper receive buffer heap-allocated only during transfers
+  (−32 KB static RAM), AppMessage inbox right-sized, webpack source map stripped
+  from the pbw (187 → 99 KB), leaner per-minute redraw (4-offset time outline,
+  weather parsed once on receipt, cached clock-card measurements), health metrics
+  polled only for visible rows
+
+## v3.20.1
+- Calendar "rows to show" gained the missing 4-row option
+
+## v3.20.0
+- ISO week number on the date (`v.28`), toggleable
+- Per-panel 3D card toggles, including a new card behind the clock that hugs the
+  text width
+- Per-panel content padding (0–24 px)
+- Custom "Today"/"Tomorrow" labels (NOW, TMR, Idag, …)
+- Selectable font size for Info and Calendar panels (14/18/24 px) with smart row
+  fitting — pairs well with CJK language packs
+- UTF-8 byte-aware event truncation (CJK text can no longer overflow or split)
+- Settings page reorganised as a per-panel accordion; dropped the unused
+  pebble-clay dependency
+
+## v3.19.x
+- v3.19.4: battery optimizations — health polled on the minute tick instead of
+  subscribing to movement events (which fire several times a second while
+  walking); phone polled hourly
+- v3.19.0: AM/PM indicator (12 h mode), step-goal colour highlight, sleep row
+
+## v3.18.0
+- Clock / Info / Calendar became three freely orderable major panels; the bottom
+  panel is pinned to the screen edge
+
+## v3.17.0
+- Timeline pins gained an "Open Agenda" action; drag-to-reorder panels in settings
+
+## v3.16.0
+- Heart rate on the steps row, phone-charging bolt icon
+
+## v3.15.x
+- Reliability: phone battery no longer disappears or freezes after reconnect
+
+## v3.14.x
+- Replaced Clay with a fully custom HTML settings page (data: URL, no hosting)
+- Fixed Android WebView quirks; weather 4-column overflow
+
+## v3.13.x
+- Info row ordering (all 24 permutations), background colour picker
+- Long tail of wallpaper/reconnect fixes: relative `.list` paths, decode OOM
+  crash, dedup keys cleared on reconnect, wallpaper survival across launcher
+  visits
+
+## v3.12.0
+- Wallpaper system rewrite: images fetched from a URL (or daily-rotating `.list`)
+  instead of 18 bundled bitmaps — app 95 % smaller
+
+## v3.11.0
+- Configurable weather columns; crash fixes (localtime NULL guard, strchr loop)
+
+## v3.10.0
+- 4-column weather row (current + N hours + two days ahead)
+
+## v3.9.0
+- Pixel weather icons (sun / cloud / rain / snow / …)
+
+## v3.8.0
+- Per-row toggles, four date formats, weather options
+
+## v3.7.0
+- Configurable calendar row count, Bluetooth-disconnect indicator
+
+## v3.6.x
+- Weather row (Open-Meteo), panel visibility toggles, dual calendar support
+
+## v3.5.x
+- Wallpaper picker + rotation whitelist, phone battery persisted across reboots
+
+## v3.4
+- First settings page (Clay): calendar URL + colours
+
+## v3.0 – v3.3
+- Image background, gradient battery bars, step-goal colour
+- Calendar agenda replaced the notification panel; events pushed as Timeline pins
+- Battery-optimized companion: conditional GET (ETag/304), localStorage cache,
+  change-only sends
+
+## v2
+- Landscape background, text battery, health data
+
+## v1.0
+- Initial release: time, date, battery, notifications

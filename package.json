@@ -1,0 +1,91 @@
+{
+  "name": "pixel8",
+  "author": "nihplod",
+  "version": "3.20.2",
+  "keywords": [
+    "pebble-app"
+  ],
+  "private": true,
+  "dependencies": {},
+  "pebble": {
+    "displayName": "Pixel8",
+    "uuid": "ee04a4d4-6400-4b06-bbec-8ac51d9bed1d",
+    "sdkVersion": "3",
+    "enableMultiJS": true,
+    "targetPlatforms": [
+      "emery"
+    ],
+    "watchapp": {
+      "watchface": true
+    },
+    "capabilities": [
+      "health",
+      "location",
+      "configurable"
+    ],
+    "messageKeys": [
+      "PHONE_BATTERY",
+      "REQUEST_STATUS",
+      "EVENT_0",
+      "EVENT_1",
+      "EVENT_2",
+      "BOX_COLOR",
+      "TEXT_COLOR",
+      "CLOCK_COLOR",
+      "WEATHER_LINE",
+      "SHOW_BATTERY",
+      "SHOW_STEPS",
+      "SHOW_WEATHER",
+      "SHOW_CALENDAR",
+      "EVENT_3",
+      "EVENT_4",
+      "CALENDAR_ROWS",
+      "DATE_FORMAT",
+      "WEATHER_ICON",
+      "WEATHER_ICON_F",
+      "WEATHER_ICON_1",
+      "WEATHER_ICON_2",
+      "WEATHER_COLS",
+      "WP_TOTAL",
+      "WP_DATA",
+      "WP_DONE",
+      "WP_HAVE",
+      "PANEL_ORDER",
+      "BG_COLOR",
+      "EVENT_0_START",
+      "LAYOUT_ORDER",
+      "SHOW_CLOCK",
+      "SHOW_SLEEP",
+      "STEP_GOAL",
+      "SHOW_WEEK",
+      "CLOCK_BG",
+      "INFO_BG",
+      "CAL_BG",
+      "CLOCK_PAD_X",
+      "CLOCK_PAD_Y",
+      "INFO_PAD_X",
+      "INFO_PAD_Y",
+      "CAL_PAD_X",
+      "CAL_PAD_Y",
+      "INFO_FONT_PX",
+      "CAL_FONT_PX"
+    ],
+    "resources": {
+      "media": [
+        { "type": "bitmap", "name": "WATCH_ICON",  "file": "images/watch_icon.png"  },
+        { "type": "bitmap", "name": "PHONE_ICON",  "file": "images/phone_icon.png"  },
+        { "type": "bitmap", "name": "WX_SUNNY",    "file": "images/wx_sunny.png"    },
+        { "type": "bitmap", "name": "WX_PARTLY",   "file": "images/wx_partly.png"   },
+        { "type": "bitmap", "name": "WX_CLOUDY",   "file": "images/wx_cloudy.png"   },
+        { "type": "bitmap", "name": "WX_RAIN_L",   "file": "images/wx_rain_l.png"   },
+        { "type": "bitmap", "name": "WX_RAIN_H",   "file": "images/wx_rain_h.png"   },
+        { "type": "bitmap", "name": "WX_SNOW_L",   "file": "images/wx_snow_l.png"   },
+        { "type": "bitmap", "name": "WX_SNOW_H",   "file": "images/wx_snow_h.png"   },
+        { "type": "bitmap", "name": "WX_MIX",      "file": "images/wx_mix.png"      },
+        { "type": "bitmap", "name": "WX_OTHER",    "file": "images/wx_other.png"    },
+        { "type": "bitmap", "name": "CHARGE_ICON", "file": "images/charge_icon.png" },
+        { "type": "bitmap", "name": "HEART_ICON",  "file": "images/heart_icon.png"  }
+      ]
+    }
+  }
+}

@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Pixel8 Settings</title>
+<style>
+:root{--bg:#111;--card:#1c1c1e;--border:#2c2c2e;--text:#f2f2f7;--sub:#8e8e93;--accent:#0a84ff;--green:#30d158}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font:-apple-system-body -apple-system,'Helvetica Neue',sans-serif;font-size:16px;padding-bottom:40px}
+h1{text-align:center;padding:24px 0 4px;font-size:22px;font-weight:700;letter-spacing:-.5px}
+.by{text-align:center;color:var(--sub);font-size:13px;margin-bottom:20px}
+
+/* Sections (accordion) */
+.sec{margin:0 16px 12px;background:var(--card);border-radius:12px;overflow:hidden;transition:opacity .2s}
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;font-size:15px;font-weight:600;cursor:pointer;user-select:none;-webkit-user-select:none}
+.sec-hdr .chev{color:var(--sub);font-size:18px;transition:transform .2s;line-height:1}
+.sec.open .sec-hdr .chev{transform:rotate(90deg)}
+.sec-body{display:none;border-top:1px solid var(--border)}
+.sec.open .sec-body{display:block}
+.opt-dimmed{opacity:.4;pointer-events:none}
+
+/* Rows */
+.row{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-top:1px solid var(--border);min-height:46px}
+.sec-body .row:first-child{border-top:none}
+.lbl{font-size:15px;flex:1;line-height:1.3}
+.sub{font-size:12px;color:var(--sub);margin-top:2px}
+.col{flex-direction:column;align-items:stretch;gap:7px}
+
+/* Toggle */
+.tog-wrap{flex-shrink:0;margin-left:12px}
+.tog{position:relative;display:inline-block;width:51px;height:31px}
+.tog input{opacity:0;width:0;height:0;position:absolute}
+.track{position:absolute;inset:0;border-radius:31px;background:#3a3a3c;cursor:pointer;transition:background .2s}
+.track::after{content:'';position:absolute;width:27px;height:27px;border-radius:50%;background:#fff;top:2px;left:2px;transition:transform .2s;box-shadow:0 2px 6px rgba(0,0,0,.5)}
+.tog input:checked~.track{background:var(--green)}
+.tog input:checked~.track::after{transform:translateX(20px)}
+
+/* Select */
+select{background:transparent;color:var(--accent);border:none;font-size:15px;cursor:pointer;-webkit-appearance:none;appearance:none;text-align:right;max-width:55%}
+select option{background:#1c1c1e;color:#fff}
+
+/* Text input */
+.inp{width:100%;background:#2c2c2e;color:var(--text);border:1px solid #3a3a3c;border-radius:9px;padding:10px 13px;font-size:15px;-webkit-appearance:none}
+.inp.num{width:76px;flex-shrink:0;margin-left:12px;text-align:center}
+.inp::placeholder{color:var(--sub)}
+.inp:focus{outline:none;border-color:var(--accent)}
+input[type=password]{letter-spacing:.1em}
+
+/* Color swatch */
+.cswatch{width:44px;height:30px;border-radius:7px;border:2px solid rgba(255,255,255,.18);cursor:pointer;flex-shrink:0;margin-left:12px}
+
+/* Collapsible */
+.hide{display:none}
+
+/* Modal */
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:99;align-items:flex-end;justify-content:center}
+.modal.open{display:flex}
+.sheet{background:#1c1c1e;border-radius:16px 16px 0 0;padding:18px 16px 36px;width:100%;max-width:420px}
+.modal-title{text-align:center;font-size:17px;font-weight:600;margin-bottom:14px}
+.cgrid{display:grid;grid-template-columns:repeat(8,1fr);gap:5px}
+.cp{aspect-ratio:1;border-radius:5px;cursor:pointer;border:2px solid transparent}
+.cp.sel,.cp:active{border-color:#fff}
+.cancel-btn{margin-top:14px;width:100%;padding:14px;background:#2c2c2e;color:var(--text);border:none;border-radius:11px;font-size:16px;cursor:pointer}
+.drag-handle{font-size:20px;color:var(--sub);margin-right:10px;line-height:1;flex-shrink:0}
+.sort-item{cursor:grab;user-select:none;-webkit-user-select:none;touch-action:none}
+.sort-item.dragging{opacity:0.4}
+
+/* Save */
+.save-btn{display:block;margin:12px 16px 0;width:calc(100% - 32px);padding:16px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-size:17px;font-weight:600;cursor:pointer}
+.save-btn:active{opacity:.8}
+</style>
+</head>
+<body>
+<h1>Pixel8</h1>
+<p class="by">Pebble Time 2 watchface settings</p>
+
+<!-- LAYOUT -->
+<div class="sec">
+  <div class="sec-hdr" onclick="accordion(this)">Layout<span class="chev">›</span></div>
+  <div class="sec-body">
+    <div class="row"><span class="lbl">Panel order</span><span style="font-size:13px;color:var(--sub)">drag to reorder</span></div>
+    <input type="hidden" id="LAYOUT_ORDER" value="0">
+    <div id="layout-sort">
+      <div class="sort-item row" data-panel="0"><span class="drag-handle">≡</span>Clock &amp; date</div>
+      <div class="sort-item row" data-panel="1"><span class="drag-handle">≡</span>Info panel</div>
+      <div class="sort-item row" data-panel="2"><span class="drag-handle">≡</span>Calendar</div>
+    </div>
+    <div class="row"><span class="lbl">Info panel order</span><span style="font-size:13px;color:var(--sub)">drag to reorder</span></div>
+    <input type="hidden" id="PANEL_ORDER" value="0">
+    <div id="panel-sort">
+      <div class="sort-item row" data-row="0"><span class="drag-handle">≡</span>Battery</div>
+      <div class="sort-item row" data-row="1"><span class="drag-handle">≡</span>Steps</div>
+      <div class="sort-item row" data-row="2"><span class="drag-handle">≡</span>Weather</div>
+      <div class="sort-item row" data-row="3"><span class="drag-handle">≡</span>Sleep</div>
+    </div>
+  </div>
+</div>
+
+<!-- CLOCK & DATE -->
+<div class="sec">
+  <div class="sec-hdr" onclick="accordion(this)">Clock &amp; date<span class="chev">›</span></div>
+  <div class="sec-body">
+    <div class="row"><span class="lbl">Show clock &amp; date</span><div class="tog-wrap"><label class="tog"><input type="checkbox" id="SHOW_CLOCK"><span class="track"></span></label></div></div>
+    <div class="row"><span class="lbl">Card background<div class="sub">3D panel behind time &amp; date</div></span><div class="tog-wrap"><label class="tog"><input type="checkbox" id="CLOCK_BG"><span class="track"></span></label></div></div>
+    <div class="row"><span class="lbl">Date format</span>
+      <select id="DATE_FORMAT">
+        <option value="0">Sat 21 Jun</option>
+        <option value="1">21/06/26</option>
+        <option value="2">06/21/26</option>
+        <option value="3">2026-06-21</option>
+      </select>
+    </div>
+    <div class="row"><span class="lbl">Week number<div class="sub">Appends v.27 to the date</div></span><div class="tog-wrap"><label class="tog"><input type="checkbox" id="SHOW_WEEK"><span class="track"></span></label></div></div>
+    <div class="row"><span class="lbl">Padding left/right<div class="sub">default 4 px</div></span><input class="inp num" type="number" min="0" max="24" id="CLOCK_PAD_X"></div>
+    <div class="row"><span class="lbl">Padding top/bottom<div class="sub">default 2 px</div></span><input class="inp num" type="number" min="0" max="24" id="CLOCK_PAD_Y"></div>
+  </div>
+</div>
+
+<!-- INFO PANEL -->
+<div class="sec">
+  <div class="sec-hdr" onclick="accordion(this)">Info panel<span class="chev">›</span></div>
+  <div class="sec-body">
+    <div class="row"><span class="lbl">Card background</span><div class="tog-wrap"><label class="tog"><input type="checkbox" id="INFO_BG"><span class="track"></span></label></div></div>
+    <div class="row"><span class="lbl">Font size</span>
+      <select id="INFO_FONT_PX">
+        <option value="14">14 px (default)</option>
+        <option value="18">18 px</option>
+        <option value="24">24 px</option>
+      </select>
+    </div>
+    <div class="row"><span class="lbl">Battery row</span><div class="tog-wrap"><label class="tog"><input type="checkbox" id="SHOW_BATTERY"><span class="track"></span></label></div></div>
+    <div class="row"><span class="lbl">Steps &amp; distance row</span><div class="tog-wrap"><label class="tog"><input type="checkbox" id="SHOW_STEPS"><span class="track"></span></label></div></div>
+    <div class="row"><span class="lbl">Step goal<div class="sub">Row turns green when reached</div></span>
+      <select id="STEP_GOAL">
+        <option value="0">Off</option>
+        <option value="5000">5 000</option>
+        <option value="7000">7 000</option>
+        <option value="8000">8 000</option>
+        <option value="10000">10 000</option>
+        <option value="12000">12 000</option>
+        <option value="15000">15 000</option>
+      </select>
+    </div>
+    <div class="row"><span class="lbl">Sleep row</span><div class="tog-wrap"><label class="tog"><input type="checkbox" id="SHOW_SLEEP"><span class="track"></span></label></div></div>
+    <div class="row"><span class="lbl">Padding left/right<div class="sub">default 8 px</div></span><input class="inp num" type="number" min="0" max="24" id="INFO_PAD_X"></div>
+    <div class="row"><span class="lbl">Padding top/bottom<div class="sub">default 6 px</div></span><input class="inp num" type="number" min="0" max="24" id="INFO_PAD_Y"></div>
+  </div>
+</div>
+
+<!-- WEATHER -->
+<div class="sec">
+  <div class="sec-hdr" onclick="accordion(this)">Weather<span class="chev">›</span></div>
+  <div class="sec-body">
+    <div class="row"><span class="lbl">Weather row</span><div class="tog-wrap"><label class="tog"><input type="checkbox" id="SHOW_WEATHER" onchange="dimOpts('wx-opts',this.checked)"><span class="track"></span></label></div></div>
+    <div id="wx-opts">
+      <div class="row"><span class="lbl">Forecast columns</span>
+        <select id="WEATHER_COLS">
+          <option value="0">Current only</option>
+          <option value="1">+ N-hour</option>
+          <option value="2">+ N-hour + tomorrow</option>
+          <option value="3">+ N-hour + tomorrow + day+2</option>
+        </select>
+      </div>
+      <div class="row"><span class="lbl">Forecast hours ahead</span>
+        <select id="WEATHER_HOURS">
+          <option value="1">1 h</option>
+          <option value="2">2 h</option>
+          <option value="4">4 h</option>
+          <option value="6">6 h</option>
+          <option value="8">8 h</option>
+          <option value="12">12 h</option>
+          <option value="24">24 h</option>
+        </select>
+      </div>
+      <div class="row">
+        <span class="lbl">Fixed location<div class="sub">Skip GPS, use coordinates below</div></span>
+        <div class="tog-wrap"><label class="tog"><input type="checkbox" id="WEATHER_FIXED" onchange="tog('fixed-loc',this.checked)"><span class="track"></span></label></div>
+      </div>
+      <div id="fixed-loc" class="hide">
+        <div class="row col"><span class="lbl">Latitude</span><input class="inp" type="number" step="0.0001" placeholder="59.3293" id="WEATHER_LAT"></div>
+        <div class="row col"><span class="lbl">Longitude</span><input class="inp" type="number" step="0.0001" placeholder="18.0686" id="WEATHER_LON"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CALENDAR -->
+<div class="sec">
+  <div class="sec-hdr" onclick="accordion(this)">Calendar<span class="chev">›</span></div>
+  <div class="sec-body">
+    <div class="row"><span class="lbl">Calendar panel</span><div class="tog-wrap"><label class="tog"><input type="checkbox" id="SHOW_CALENDAR" onchange="dimOpts('cal-opts',this.checked)"><span class="track"></span></label></div></div>
+    <div id="cal-opts">
+      <div class="row"><span class="lbl">Card background</span><div class="tog-wrap"><label class="tog"><input type="checkbox" id="CAL_BG"><span class="track"></span></label></div></div>
+      <div class="row"><span class="lbl">Font size</span>
+        <select id="CAL_FONT_PX">
+          <option value="14">14 px (default)</option>
+          <option value="18">18 px</option>
+          <option value="24">24 px</option>
+        </select>
+      </div>
+      <div class="row"><span class="lbl">Rows to show<div class="sub">Fewer rows shown if they don't fit</div></span>
+        <select id="CALENDAR_ROWS">
+          <option value="1">1 row</option>
+          <option value="2">2 rows</option>
+          <option value="3">3 rows</option>
+          <option value="4">4 rows</option>
+          <option value="5">5 rows</option>
+        </select>
+      </div>
+      <div class="row"><span class="lbl">"Today" label<div class="sub">Max 10 chars — e.g. NOW, TDY, Idag</div></span><input class="inp num" style="width:110px;text-align:left" type="text" maxlength="10" placeholder="Today" list="today-suggestions" id="LABEL_TODAY" autocomplete="off"></div>
+      <datalist id="today-suggestions"><option value="Today"><option value="NOW"><option value="TDY"><option value="Idag"></datalist>
+      <div class="row"><span class="lbl">"Tomorrow" label<div class="sub">Max 10 chars — e.g. TMR, Imorgon</div></span><input class="inp num" style="width:110px;text-align:left" type="text" maxlength="10" placeholder="Tomorrow" list="tomorrow-suggestions" id="LABEL_TOMORROW" autocomplete="off"></div>
+      <datalist id="tomorrow-suggestions"><option value="Tomorrow"><option value="TMR"><option value="TMRW"><option value="Imorgon"></datalist>
+      <div class="row"><span class="lbl">Padding left/right<div class="sub">default 8 px</div></span><input class="inp num" type="number" min="0" max="24" id="CAL_PAD_X"></div>
+      <div class="row"><span class="lbl">Padding top/bottom<div class="sub">default 1 px</div></span><input class="inp num" type="number" min="0" max="24" id="CAL_PAD_Y"></div>
+      <div class="row col"><span class="lbl">iCal / ICS URL</span><input class="inp" type="text" placeholder="https://…/calendar.ics" id="CALENDAR_URL" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"></div>
+      <div class="row">
+        <span class="lbl">Authentication<div class="sub">HTTP Basic auth for private calendars</div></span>
+        <div class="tog-wrap"><label class="tog"><input type="checkbox" id="USE_AUTH" onchange="tog('cal1-auth',this.checked)"><span class="track"></span></label></div>
+      </div>
+      <div id="cal1-auth" class="hide">
+        <div class="row col"><span class="lbl">Username</span><input class="inp" type="text" autocomplete="off" id="CALENDAR_USER"></div>
+        <div class="row col"><span class="lbl">Password</span><input class="inp" type="password" autocomplete="off" id="CALENDAR_PASS"></div>
+      </div>
+      <div class="row">
+        <span class="lbl">Second calendar</span>
+        <div class="tog-wrap"><label class="tog"><input type="checkbox" id="USE_CAL2" onchange="tog('cal2-sec',this.checked)"><span class="track"></span></label></div>
+      </div>
+      <div id="cal2-sec" class="hide">
+        <div class="row col"><span class="lbl">iCal / ICS URL 2</span><input class="inp" type="text" placeholder="https://…/calendar.ics" id="CALENDAR_URL_2" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"></div>
+        <div class="row">
+          <span class="lbl">Authentication<div class="sub">HTTP Basic auth for private calendars</div></span>
+          <div class="tog-wrap"><label class="tog"><input type="checkbox" id="USE_AUTH2" onchange="tog('cal2-auth',this.checked)"><span class="track"></span></label></div>
+        </div>
+        <div id="cal2-auth" class="hide">
+          <div class="row col"><span class="lbl">Username</span><input class="inp" type="text" autocomplete="off" id="CALENDAR_USER_2"></div>
+          <div class="row col"><span class="lbl">Password</span><input class="inp" type="password" autocomplete="off" id="CALENDAR_PASS_2"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- COLORS -->
+<div class="sec">
+  <div class="sec-hdr" onclick="accordion(this)">Colors<span class="chev">›</span></div>
+  <div class="sec-body">
+    <div class="row"><span class="lbl">Panel boxes</span><button class="cswatch" id="sw-BOX_COLOR" onclick="openPicker('BOX_COLOR','Panel boxes')"></button></div>
+    <div class="row"><span class="lbl">Text</span><button class="cswatch" id="sw-TEXT_COLOR" onclick="openPicker('TEXT_COLOR','Text')"></button></div>
+    <div class="row"><span class="lbl">Clock &amp; date</span><button class="cswatch" id="sw-CLOCK_COLOR" onclick="openPicker('CLOCK_COLOR','Clock &amp; date')"></button></div>
+  </div>
+</div>
+
+<!-- WALLPAPER -->
+<div class="sec">
+  <div class="sec-hdr" onclick="accordion(this)">Wallpaper<span class="chev">›</span></div>
+  <div class="sec-body">
+    <div class="row"><span class="lbl">Background color</span><button class="cswatch" id="sw-BG_COLOR" onclick="openPicker('BG_COLOR','Background color')"></button></div>
+    <div class="row col">
+      <span class="lbl">Wallpaper URL<div class="sub">Direct PNG (200×228 px, max 32 KB) or .list URL with one PNG URL per line for daily rotation</div></span>
+      <input class="inp" type="text" placeholder="https://example.com/bg.png" id="WALLPAPER_URL" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
+    </div>
+  </div>
+</div>
+
+<button class="save-btn" onclick="save()">Save</button>
+
+<!-- COLOR PICKER MODAL -->
+<div class="modal" id="picker-modal" onclick="if(event.target===this)closePicker()">
+  <div class="sheet">
+    <div class="modal-title" id="picker-title">Choose color</div>
+    <div class="cgrid" id="cgrid"></div>
+    <button class="cancel-btn" onclick="closePicker()">Cancel</button>
+  </div>
+</div>
+
+<script>
+/*__CONFIG__*/
+var cfg = (typeof INITIAL_CONFIG !== 'undefined') ? INITIAL_CONFIG : {};
+function get(k, d) { return cfg.hasOwnProperty(k) ? cfg[k] : d; }
+
+/* ── Accordion ─────────────────────────────────────────────── */
+function accordion(hdr) {
+  hdr.parentElement.classList.toggle('open');
+}
+
+/* ── Collapsible / dimming ─────────────────────────────────── */
+function tog(id, open) {
+  document.getElementById(id).classList.toggle('hide', !open);
+}
+function dimOpts(id, enabled) {
+  document.getElementById(id).classList.toggle('opt-dimmed', !enabled);
+}
+
+/* ── Color helpers ─────────────────────────────────────────── */
+var colorVals = {
+  BOX_COLOR:   get('BOX_COLOR',   '0x000000'),
+  TEXT_COLOR:  get('TEXT_COLOR',  '0xff5500'),
+  CLOCK_COLOR: get('CLOCK_COLOR', '0xffffff'),
+  BG_COLOR:    get('BG_COLOR',    '0x000000')
+};
+function toHtml(v) {
+  var n = parseInt(String(v).replace(/^#|^0x/i,''),16);
+  return isNaN(n)?'#000000':'#'+('000000'+n.toString(16)).slice(-6);
+}
+function toPebble(v) { return '0x'+v.replace('#',''); }
+function setSwatch(k) {
+  var el = document.getElementById('sw-'+k);
+  if (el) el.style.background = toHtml(colorVals[k]);
+}
+
+/* ── Pebble 64-colour palette (HSL-sorted) ─────────────────── */
+function hsl(r,g,b){
+  r/=255;g/=255;b/=255;
+  var mx=Math.max(r,g,b),mn=Math.min(r,g,b),h=0,s=0,l=(mx+mn)/2;
+  if(mx!==mn){var d=mx-mn;s=l>.5?d/(2-mx-mn):d/(mx+mn);
+    if(mx===r)h=(g-b)/d+(g<b?6:0);
+    else if(mx===g)h=(b-r)/d+2;
+    else h=(r-g)/d+4;h/=6;}
+  return[h,s,l];
+}
+var LV=[0,85,170,255], palette=[];
+LV.forEach(function(r){LV.forEach(function(g){LV.forEach(function(b){palette.push([r,g,b]);});});});
+palette.sort(function(a,b){
+  var ha=hsl(a[0],a[1],a[2]),hb=hsl(b[0],b[1],b[2]);
+  var ga=ha[1]<.01,gb=hb[1]<.01;
+  if(ga&&gb)return ha[2]-hb[2];
+  if(ga)return -1;if(gb)return 1;
+  if(Math.abs(ha[0]-hb[0])>.01)return ha[0]-hb[0];
+  return ha[2]-hb[2];
+});
+
+/* ── Build colour grid ─────────────────────────────────────── */
+(function(){
+  var g=document.getElementById('cgrid');
+  palette.forEach(function(c){
+    var hex='#'+('0'+c[0].toString(16)).slice(-2)+('0'+c[1].toString(16)).slice(-2)+('0'+c[2].toString(16)).slice(-2);
+    var el=document.createElement('div');
+    el.className='cp';el.style.background=hex;el.dataset.hex=hex;
+    el.onclick=function(){pickColor(hex);};
+    g.appendChild(el);
+  });
+})();
+
+/* ── Picker modal ──────────────────────────────────────────── */
+var activeKey=null;
+function openPicker(key,label){
+  activeKey=key;
+  document.getElementById('picker-title').textContent=label;
+  var cur=toHtml(colorVals[key]);
+  document.querySelectorAll('.cp').forEach(function(el){
+    el.classList.toggle('sel',el.dataset.hex===cur);
+  });
+  document.getElementById('picker-modal').classList.add('open');
+}
+function pickColor(hex){
+  if(!activeKey)return;
+  colorVals[activeKey]=toPebble(hex);
+  setSwatch(activeKey);
+  closePicker();
+}
+function closePicker(){
+  document.getElementById('picker-modal').classList.remove('open');
+  activeKey=null;
+}
+
+/* ── Select helper ─────────────────────────────────────────── */
+function setSelect(id,val){
+  var el=document.getElementById(id);
+  if(!el)return;
+  for(var i=0;i<el.options.length;i++){
+    if(el.options[i].value===String(val)){el.selectedIndex=i;return;}
+  }
+}
+
+/* ── Init ──────────────────────────────────────────────────── */
+function init(){
+  var showWx  = get('SHOW_WEATHER', true)  !== false;
+  var showCal = get('SHOW_CALENDAR',true)  !== false;
+
+  document.getElementById('SHOW_CLOCK').checked    = get('SHOW_CLOCK',   true)  !== false;
+  document.getElementById('SHOW_SLEEP').checked    = get('SHOW_SLEEP',   false) === true;
+  setSelect('STEP_GOAL', get('STEP_GOAL', '0'));
+  document.getElementById('SHOW_BATTERY').checked  = get('SHOW_BATTERY', true)  !== false;
+  document.getElementById('SHOW_STEPS').checked    = get('SHOW_STEPS',   true)  !== false;
+  document.getElementById('SHOW_WEATHER').checked  = showWx;
+  document.getElementById('SHOW_CALENDAR').checked = showCal;
+  if (!showWx)  document.getElementById('wx-opts').classList.add('opt-dimmed');
+  if (!showCal) document.getElementById('cal-opts').classList.add('opt-dimmed');
+
+  setLayoutOrder(get('LAYOUT_ORDER','0'));
+  setPanelOrder(get('PANEL_ORDER','0'));
+  setSelect('CALENDAR_ROWS',     get('CALENDAR_ROWS','3'));
+  setSelect('DATE_FORMAT',       get('DATE_FORMAT','0'));
+  setSelect('WEATHER_COLS',      get('WEATHER_COLS','3'));
+  setSelect('WEATHER_HOURS',     get('WEATHER_HOURS','4'));
+
+  document.getElementById('SHOW_WEEK').checked = get('SHOW_WEEK', false) === true;
+  document.getElementById('CLOCK_BG').checked  = get('CLOCK_BG',  false) === true;
+  document.getElementById('INFO_BG').checked   = get('INFO_BG',   true)  !== false;
+  document.getElementById('CAL_BG').checked    = get('CAL_BG',    true)  !== false;
+  setSelect('INFO_FONT_PX', get('INFO_FONT_PX','14'));
+  setSelect('CAL_FONT_PX',  get('CAL_FONT_PX','14'));
+
+  var PAD_DEFAULTS = { CLOCK_PAD_X:4, CLOCK_PAD_Y:2, INFO_PAD_X:8, INFO_PAD_Y:6, CAL_PAD_X:8, CAL_PAD_Y:1 };
+  Object.keys(PAD_DEFAULTS).forEach(function(k){
+    var v = parseInt(get(k, PAD_DEFAULTS[k]), 10);
+    if (isNaN(v) || v < 0 || v > 24) v = PAD_DEFAULTS[k];
+    document.getElementById(k).value = v;
+  });
+
+  document.getElementById('LABEL_TODAY').value    = get('LABEL_TODAY','');
+  document.getElementById('LABEL_TOMORROW').value = get('LABEL_TOMORROW','');
+
+  var fx = get('WEATHER_FIXED',false);
+  var fxOn = fx===true||fx==='true';
+  document.getElementById('WEATHER_FIXED').checked = fxOn;
+  if(fxOn) document.getElementById('fixed-loc').classList.remove('hide');
+
+  document.getElementById('WEATHER_LAT').value = get('WEATHER_LAT','');
+  document.getElementById('WEATHER_LON').value = get('WEATHER_LON','');
+
+  Object.keys(colorVals).forEach(setSwatch);
+
+  document.getElementById('CALENDAR_URL').value  = get('CALENDAR_URL','');
+  var hasAuth = !!(get('CALENDAR_USER','') || get('CALENDAR_PASS',''));
+  document.getElementById('USE_AUTH').checked = hasAuth;
+  if (hasAuth) document.getElementById('cal1-auth').classList.remove('hide');
+  document.getElementById('CALENDAR_USER').value = get('CALENDAR_USER','');
+  document.getElementById('CALENDAR_PASS').value = get('CALENDAR_PASS','');
+
+  var hasCal2 = !!(get('CALENDAR_URL_2','') || get('CALENDAR_USER_2',''));
+  document.getElementById('USE_CAL2').checked = hasCal2;
+  if (hasCal2) document.getElementById('cal2-sec').classList.remove('hide');
+  document.getElementById('CALENDAR_URL_2').value  = get('CALENDAR_URL_2','');
+  var hasAuth2 = !!(get('CALENDAR_USER_2','') || get('CALENDAR_PASS_2',''));
+  document.getElementById('USE_AUTH2').checked = hasAuth2;
+  if (hasAuth2) document.getElementById('cal2-auth').classList.remove('hide');
+  document.getElementById('CALENDAR_USER_2').value = get('CALENDAR_USER_2','');
+  document.getElementById('CALENDAR_PASS_2').value = get('CALENDAR_PASS_2','');
+
+  document.getElementById('WALLPAPER_URL').value = get('WALLPAPER_URL','');
+}
+
+/* ── Save ──────────────────────────────────────────────────── */
+function save(){
+  var useAuth  = document.getElementById('USE_AUTH').checked;
+  var useCal2  = document.getElementById('USE_CAL2').checked;
+  var useAuth2 = document.getElementById('USE_AUTH2').checked;
+  var s = {
+    SHOW_CLOCK:         document.getElementById('SHOW_CLOCK').checked,
+    SHOW_SLEEP:         document.getElementById('SHOW_SLEEP').checked,
+    STEP_GOAL:          document.getElementById('STEP_GOAL').value,
+    SHOW_BATTERY:       document.getElementById('SHOW_BATTERY').checked,
+    SHOW_STEPS:         document.getElementById('SHOW_STEPS').checked,
+    SHOW_WEATHER:       document.getElementById('SHOW_WEATHER').checked,
+    SHOW_CALENDAR:      document.getElementById('SHOW_CALENDAR').checked,
+    LAYOUT_ORDER:       document.getElementById('LAYOUT_ORDER').value,
+    PANEL_ORDER:        document.getElementById('PANEL_ORDER').value,
+    CALENDAR_ROWS:      document.getElementById('CALENDAR_ROWS').value,
+    DATE_FORMAT:        document.getElementById('DATE_FORMAT').value,
+    WEATHER_COLS:       document.getElementById('WEATHER_COLS').value,
+    WEATHER_HOURS:      document.getElementById('WEATHER_HOURS').value,
+    WEATHER_FIXED:      document.getElementById('WEATHER_FIXED').checked,
+    WEATHER_LAT:        document.getElementById('WEATHER_LAT').value,
+    WEATHER_LON:        document.getElementById('WEATHER_LON').value,
+    SHOW_WEEK:          document.getElementById('SHOW_WEEK').checked,
+    CLOCK_BG:           document.getElementById('CLOCK_BG').checked,
+    INFO_BG:            document.getElementById('INFO_BG').checked,
+    CAL_BG:             document.getElementById('CAL_BG').checked,
+    INFO_FONT_PX:       document.getElementById('INFO_FONT_PX').value,
+    CAL_FONT_PX:        document.getElementById('CAL_FONT_PX').value,
+    CLOCK_PAD_X:        document.getElementById('CLOCK_PAD_X').value,
+    CLOCK_PAD_Y:        document.getElementById('CLOCK_PAD_Y').value,
+    INFO_PAD_X:         document.getElementById('INFO_PAD_X').value,
+    INFO_PAD_Y:         document.getElementById('INFO_PAD_Y').value,
+    CAL_PAD_X:          document.getElementById('CAL_PAD_X').value,
+    CAL_PAD_Y:          document.getElementById('CAL_PAD_Y').value,
+    LABEL_TODAY:        document.getElementById('LABEL_TODAY').value.trim().substring(0,10),
+    LABEL_TOMORROW:     document.getElementById('LABEL_TOMORROW').value.trim().substring(0,10),
+    BOX_COLOR:          colorVals.BOX_COLOR,
+    TEXT_COLOR:         colorVals.TEXT_COLOR,
+    CLOCK_COLOR:        colorVals.CLOCK_COLOR,
+    BG_COLOR:           colorVals.BG_COLOR,
+    CALENDAR_URL:       document.getElementById('CALENDAR_URL').value.trim(),
+    CALENDAR_USER:      useAuth  ? document.getElementById('CALENDAR_USER').value  : '',
+    CALENDAR_PASS:      useAuth  ? document.getElementById('CALENDAR_PASS').value  : '',
+    CALENDAR_URL_2:     useCal2  ? document.getElementById('CALENDAR_URL_2').value.trim() : '',
+    CALENDAR_USER_2:    (useCal2 && useAuth2) ? document.getElementById('CALENDAR_USER_2').value : '',
+    CALENDAR_PASS_2:    (useCal2 && useAuth2) ? document.getElementById('CALENDAR_PASS_2').value : '',
+    WALLPAPER_URL:      document.getElementById('WALLPAPER_URL').value.trim()
+  };
+  location.href = 'pebblejs://close#' + encodeURIComponent(JSON.stringify(s));
+}
+
+/* ── Layout sort (Clock / Info / Calendar) ─────────────────── */
+var LAYOUT_PERMS = [[0,1,2],[0,2,1],[1,0,2],[1,2,0],[2,0,1],[2,1,0]];
+function setLayoutOrder(val) {
+  var perm = LAYOUT_PERMS[parseInt(val)] || LAYOUT_PERMS[0];
+  var c = document.getElementById('layout-sort');
+  var items = Array.from(c.querySelectorAll('.sort-item'));
+  perm.forEach(function(p) {
+    c.appendChild(items.find(function(el) { return parseInt(el.dataset.panel) === p; }));
+  });
+  document.getElementById('LAYOUT_ORDER').value = val;
+}
+function updateLayoutOrder() {
+  var order = Array.from(document.querySelectorAll('#layout-sort .sort-item'))
+                   .map(function(el) { return parseInt(el.dataset.panel); });
+  for (var i = 0; i < LAYOUT_PERMS.length; i++) {
+    if (LAYOUT_PERMS[i].every(function(v,j) { return v === order[j]; })) {
+      document.getElementById('LAYOUT_ORDER').value = i; return;
+    }
+  }
+  document.getElementById('LAYOUT_ORDER').value = 0;
+}
+function initLayoutSort() {
+  var c = document.getElementById('layout-sort');
+  var dragging = null;
+  c.addEventListener('touchstart', function(e) {
+    dragging = e.target.closest('.sort-item');
+    if (dragging) { dragging.classList.add('dragging'); e.preventDefault(); }
+  }, {passive:false});
+  c.addEventListener('touchmove', function(e) {
+    if (!dragging) return;
+    var y = e.touches[0].clientY;
+    var others = Array.from(c.querySelectorAll('.sort-item')).filter(function(el) { return el !== dragging; });
+    var before = null;
+    for (var i = 0; i < others.length; i++) {
+      var r = others[i].getBoundingClientRect();
+      if (y < r.top + r.height / 2) { before = others[i]; break; }
+    }
+    c.insertBefore(dragging, before);
+    e.preventDefault();
+  }, {passive:false});
+  c.addEventListener('touchend', function() {
+    if (!dragging) return;
+    dragging.classList.remove('dragging'); dragging = null; updateLayoutOrder();
+  });
+  var dragSrc = null;
+  Array.from(c.querySelectorAll('.sort-item')).forEach(function(item) {
+    item.setAttribute('draggable', 'true');
+    item.addEventListener('dragstart', function() { dragSrc = this; this.classList.add('dragging'); });
+    item.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      if (this === dragSrc) return;
+      var r = this.getBoundingClientRect();
+      c.insertBefore(dragSrc, e.clientY < r.top + r.height / 2 ? this : this.nextSibling);
+    });
+    item.addEventListener('dragend', function() {
+      this.classList.remove('dragging'); dragSrc = null; updateLayoutOrder();
+    });
+  });
+}
+
+/* ── Panel sort ────────────────────────────────────────────── */
+var PANEL_PERMS = [
+  [0,1,2,3],[0,1,3,2],[0,2,1,3],[0,2,3,1],[0,3,1,2],[0,3,2,1],
+  [1,0,2,3],[1,0,3,2],[1,2,0,3],[1,2,3,0],[1,3,0,2],[1,3,2,0],
+  [2,0,1,3],[2,0,3,1],[2,1,0,3],[2,1,3,0],[2,3,0,1],[2,3,1,0],
+  [3,0,1,2],[3,0,2,1],[3,1,0,2],[3,1,2,0],[3,2,0,1],[3,2,1,0]
+];
+function setPanelOrder(val) {
+  var perm = PANEL_PERMS[parseInt(val)] || PANEL_PERMS[0];
+  var c = document.getElementById('panel-sort');
+  var items = Array.from(c.querySelectorAll('.sort-item'));
+  perm.forEach(function(r) {
+    c.appendChild(items.find(function(el) { return parseInt(el.dataset.row) === r; }));
+  });
+  document.getElementById('PANEL_ORDER').value = val;
+}
+function updatePanelOrder() {
+  var order = Array.from(document.querySelectorAll('#panel-sort .sort-item'))
+                   .map(function(el) { return parseInt(el.dataset.row); });
+  for (var i = 0; i < PANEL_PERMS.length; i++) {
+    if (PANEL_PERMS[i].every(function(v,j) { return v === order[j]; })) {
+      document.getElementById('PANEL_ORDER').value = i; return;
+    }
+  }
+  document.getElementById('PANEL_ORDER').value = 0;
+}
+function initPanelSort() {
+  var c = document.getElementById('panel-sort');
+  var dragging = null;
+  c.addEventListener('touchstart', function(e) {
+    dragging = e.target.closest('.sort-item');
+    if (dragging) { dragging.classList.add('dragging'); e.preventDefault(); }
+  }, {passive:false});
+  c.addEventListener('touchmove', function(e) {
+    if (!dragging) return;
+    var y = e.touches[0].clientY;
+    var others = Array.from(c.querySelectorAll('.sort-item')).filter(function(el) { return el !== dragging; });
+    var before = null;
+    for (var i = 0; i < others.length; i++) {
+      var r = others[i].getBoundingClientRect();
+      if (y < r.top + r.height / 2) { before = others[i]; break; }
+    }
+    c.insertBefore(dragging, before);
+    e.preventDefault();
+  }, {passive:false});
+  c.addEventListener('touchend', function() {
+    if (!dragging) return;
+    dragging.classList.remove('dragging'); dragging = null; updatePanelOrder();
+  });
+  var dragSrc = null;
+  Array.from(c.querySelectorAll('.sort-item')).forEach(function(item) {
+    item.addEventListener('dragstart', function() { dragSrc = this; this.classList.add('dragging'); });
+    item.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      if (this === dragSrc) return;
+      var r = this.getBoundingClientRect();
+      c.insertBefore(dragSrc, e.clientY < r.top + r.height / 2 ? this : this.nextSibling);
+    });
+    item.addEventListener('dragend', function() {
+      this.classList.remove('dragging'); dragSrc = null; updatePanelOrder();
+    });
+  });
+}
+
+init();
+initLayoutSort();
+initPanelSort();
+</script>
+</body>
+</html>
