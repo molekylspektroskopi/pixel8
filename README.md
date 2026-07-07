@@ -1,5 +1,9 @@
 # Pixel8
 
+> **Heads-up:** this project is built entirely with [Claude Code](https://claude.com/claude-code)
+> by someone who can't code. I describe what I want on my watch; Claude writes the
+> code. Read, reuse, and judge the source with that in mind.
+
 A feature-rich watchface for **Pebble Time 2** (emery, 200×228 color), built around
 full-screen pixel-art wallpapers with floating 3D info cards.
 
