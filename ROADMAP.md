@@ -101,6 +101,7 @@ Progress map and future ideas for the Pixel8 watchface (Pebble Time 2 / emery).
 
 | Version | Summary |
 |---------|---------|
+| v3.21.1 | Fixed battery time-remaining estimate overstating drain rate (anchor was resetting on no-op ticks); settings page notes the learning period |
 | v3.21.0 | Battery row: optional estimated time remaining (watch/phone independently), redesigned pixel-art battery gauge |
 | v3.20.2 | Optimization pass: wallpaper buffer heap-allocated per transfer (−32 KB static RAM), right-sized AppMessage inbox, source map stripped from pbw (187→99 KB), leaner per-minute redraw (4-offset outline, pre-parsed weather, cached clock measurements), health polled only for visible rows |
 | v3.20.1 | Calendar rows setting gained the missing 4-row option |

@@ -71,12 +71,15 @@
 #define PERSIST_CAL_FONT_PX      47
 #define PERSIST_BATSTYLE_WATCH   48   // 0=percentage bar, 1=estimated time remaining
 #define PERSIST_BATSTYLE_PHONE   49
-#define PERSIST_WBAT_HIST_PCT    50   // battery-life rate tracking (see update_battery_rate)
-#define PERSIST_WBAT_HIST_TIME   51
-#define PERSIST_WBAT_RATE        52
-#define PERSIST_PBAT_HIST_PCT    53
-#define PERSIST_PBAT_HIST_TIME   54
-#define PERSIST_PBAT_RATE        55
+// Rate-tracking keys were bumped (50-55 -> 56-61) when the anchor-reset bug
+// in update_battery_rate() was fixed, so devices upgrading don't blend in
+// history recorded under the old (badly overestimated) logic.
+#define PERSIST_WBAT_HIST_PCT    56   // battery-life rate tracking (see update_battery_rate)
+#define PERSIST_WBAT_HIST_TIME   57
+#define PERSIST_WBAT_RATE        58
+#define PERSIST_PBAT_HIST_PCT    59
+#define PERSIST_PBAT_HIST_TIME   60
+#define PERSIST_PBAT_RATE        61
 
 #define safe_copy(dst, src) do { strncpy((dst), (src), sizeof(dst) - 1); (dst)[sizeof(dst) - 1] = '\0'; } while(0)
 
@@ -227,25 +230,35 @@ static GColor battery_color(int percent) {
 static void update_battery_rate(int new_percent, int *hist_pct, time_t *hist_time,
                                  int32_t *rate, uint32_t pct_key, uint32_t time_key, uint32_t rate_key) {
     time_t now = time(NULL);
-    if (*hist_pct >= 0 && *hist_time > 0) {
-        time_t dt = now - *hist_time;
-        if (dt >= 600) {
-            int dp = new_percent - *hist_pct;
-            int32_t instant = (int32_t)(((int64_t)dp * 1000 * 3600) / dt);  // milli-%/hour
-            bool same_dir = (*rate == 0) || (instant == 0) || ((*rate > 0) == (instant > 0));
-            *rate = same_dir ? (int32_t)(((int64_t)*rate * 7 + (int64_t)instant * 3) / 10) : instant;
-            *hist_pct  = new_percent;
-            *hist_time = now;
-            persist_write_int(rate_key, *rate);
-            persist_write_int(pct_key,  *hist_pct);
-            persist_write_int(time_key, (int32_t)*hist_time);
-        }
-    } else {
+    if (*hist_pct < 0 || *hist_time <= 0) {
         *hist_pct  = new_percent;
         *hist_time = now;
         persist_write_int(pct_key,  *hist_pct);
         persist_write_int(time_key, (int32_t)*hist_time);
+        return;
     }
+
+    // Battery percent is coarsely quantized (Pebble hardware reports in ~10%
+    // steps; this callback also fires far more often than the percent
+    // actually changes), so it can sit flat for many hours between real
+    // ticks. Only advance the anchor when we see an ACTUAL change — resetting
+    // hist_time on every no-op call would attribute the eventual jump to
+    // just the last few minutes instead of the true multi-hour gap, wildly
+    // inflating the computed rate.
+    int dp = new_percent - *hist_pct;
+    if (dp == 0) return;
+
+    time_t dt = now - *hist_time;
+    if (dt < 600) return;  // real change, but too soon to trust the delta yet
+
+    int32_t instant = (int32_t)(((int64_t)dp * 1000 * 3600) / dt);  // milli-%/hour
+    bool same_dir = (*rate == 0) || (instant == 0) || ((*rate > 0) == (instant > 0));
+    *rate = same_dir ? (int32_t)(((int64_t)*rate * 7 + (int64_t)instant * 3) / 10) : instant;
+    *hist_pct  = new_percent;
+    *hist_time = now;
+    persist_write_int(rate_key, *rate);
+    persist_write_int(pct_key,  *hist_pct);
+    persist_write_int(time_key, (int32_t)*hist_time);
 }
 
 // Formats remaining (or time-to-full) as "Nd Nh" / "Nh" / "Nm". Falls back to

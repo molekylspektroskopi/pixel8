@@ -1,5 +1,16 @@
 # Changelog
 
+## v3.21.1
+- Fixed battery time-remaining estimate being wildly too pessimistic: the
+  on-watch rate tracker was resetting its reference point on every battery
+  callback, even when the percentage hadn't actually changed. Since battery
+  percent only updates in coarse steps, this attributed each real change to
+  just the last few minutes instead of the true multi-hour gap, hugely
+  overstating the drain rate. Estimates now only advance on an actual
+  percent change, so the elapsed time is measured correctly
+- Settings page now notes that the estimate takes a day or two (watch) or a
+  few hours (phone) to learn your actual drain rate before it stops showing "..."
+
 ## v3.21.0
 - Battery row: watch and phone can each independently show estimated time
   remaining in place of the bar, derived on-watch from a smoothed %/hour
