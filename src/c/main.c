@@ -69,6 +69,14 @@
 #define PERSIST_CAL_PAD_Y        45
 #define PERSIST_INFO_FONT_PX     46
 #define PERSIST_CAL_FONT_PX      47
+#define PERSIST_BATSTYLE_WATCH   48   // 0=percentage bar, 1=estimated time remaining
+#define PERSIST_BATSTYLE_PHONE   49
+#define PERSIST_WBAT_HIST_PCT    50   // battery-life rate tracking (see update_battery_rate)
+#define PERSIST_WBAT_HIST_TIME   51
+#define PERSIST_WBAT_RATE        52
+#define PERSIST_PBAT_HIST_PCT    53
+#define PERSIST_PBAT_HIST_TIME   54
+#define PERSIST_PBAT_RATE        55
 
 #define safe_copy(dst, src) do { strncpy((dst), (src), sizeof(dst) - 1); (dst)[sizeof(dst) - 1] = '\0'; } while(0)
 
@@ -88,6 +96,17 @@ static int  s_watch_battery   = 100;
 static bool s_watch_charging  = false;
 static int  s_phone_battery   = -1;
 static bool s_phone_charging  = false;
+
+// Battery-life estimation: display style (percentage bar vs. "Nd Nh") and the
+// rate-tracking state used to derive it. See update_battery_rate().
+static bool s_batstyle_watch  = false;
+static bool s_batstyle_phone  = false;
+static int    s_wbat_hist_pct  = -1;
+static time_t s_wbat_hist_time = 0;
+static int32_t s_wbat_rate     = 0;   // milli-percent/hour, signed (+ = charging, - = discharging)
+static int    s_pbat_hist_pct  = -1;
+static time_t s_pbat_hist_time = 0;
+static int32_t s_pbat_rate     = 0;
 
 // User-configurable colors (set in load_persist, updated by the settings page)
 static GColor s_box_color;
@@ -195,6 +214,59 @@ static GColor battery_color(int percent) {
 }
 
 // ============================================================================
+// BATTERY LIFE ESTIMATION
+//
+// Neither the watch nor the phone exposes a real "time remaining" figure, so
+// we derive one from the % readings we already receive: track (percent,
+// timestamp) samples at least 10 minutes apart and keep a smoothed %/hour
+// rate. Direction flips (charger plugged/unplugged) reset the rate to the
+// fresh instant reading instead of blending, so the estimate doesn't linger
+// on stale sign after a state change.
+// ============================================================================
+
+static void update_battery_rate(int new_percent, int *hist_pct, time_t *hist_time,
+                                 int32_t *rate, uint32_t pct_key, uint32_t time_key, uint32_t rate_key) {
+    time_t now = time(NULL);
+    if (*hist_pct >= 0 && *hist_time > 0) {
+        time_t dt = now - *hist_time;
+        if (dt >= 600) {
+            int dp = new_percent - *hist_pct;
+            int32_t instant = (int32_t)(((int64_t)dp * 1000 * 3600) / dt);  // milli-%/hour
+            bool same_dir = (*rate == 0) || (instant == 0) || ((*rate > 0) == (instant > 0));
+            *rate = same_dir ? (int32_t)(((int64_t)*rate * 7 + (int64_t)instant * 3) / 10) : instant;
+            *hist_pct  = new_percent;
+            *hist_time = now;
+            persist_write_int(rate_key, *rate);
+            persist_write_int(pct_key,  *hist_pct);
+            persist_write_int(time_key, (int32_t)*hist_time);
+        }
+    } else {
+        *hist_pct  = new_percent;
+        *hist_time = now;
+        persist_write_int(pct_key,  *hist_pct);
+        persist_write_int(time_key, (int32_t)*hist_time);
+    }
+}
+
+// Formats remaining (or time-to-full) as "Nd Nh" / "Nh" / "Nm". Falls back to
+// "..." until enough history has accumulated to have a rate at all.
+static void format_battery_time(char *buf, size_t bufsz, int percent, bool charging, int32_t rate) {
+    if (percent < 0) { snprintf(buf, bufsz, "---"); return; }
+    if (rate == 0)   { snprintf(buf, bufsz, "...");  return; }
+    int32_t abs_rate = rate < 0 ? -rate : rate;
+    int pct_left = charging ? (100 - percent) : percent;
+    if (pct_left <= 0) { snprintf(buf, bufsz, charging ? "Full" : "0h"); return; }
+    int64_t total_min = ((int64_t)pct_left * 1000 * 60) / abs_rate;
+    if (total_min < 60) {
+        snprintf(buf, bufsz, "%dm", (int)total_min);
+    } else if (total_min < 60 * 24) {
+        snprintf(buf, bufsz, "%dh", (int)(total_min / 60));
+    } else {
+        snprintf(buf, bufsz, "%dd%dh", (int)(total_min / (60 * 24)), (int)((total_min / 60) % 24));
+    }
+}
+
+// ============================================================================
 // ICON DRAWING — small pixel phone and watch icons
 // ============================================================================
 
@@ -205,6 +277,36 @@ static int draw_icon_bmp(GContext *ctx, GBitmap *bmp, int x, int y) {
     graphics_context_set_compositing_mode(ctx, GCompOpSet);
     graphics_draw_bitmap_in_rect(ctx, bmp, GRect(x, y, b.size.w, b.size.h));
     return b.size.w;
+}
+
+// Chunky pixel-art battery gauge: black shell + terminal nub, dark-gray empty
+// track, proportional colored fill. Replaces the old flat two-tone bar.
+static void draw_battery_gauge(GContext *ctx, int x, int y, int w, int h,
+                                int percent, GColor fill_color) {
+    if (w < 8) return;
+    int nub_w   = 2;
+    int body_w  = w - nub_w - 1;
+    if (body_w < 6) { nub_w = 0; body_w = w; }
+    int r = (h >= 6) ? 2 : 1;
+
+    graphics_context_set_fill_color(ctx, GColorBlack);
+    graphics_fill_rect(ctx, GRect(x, y, body_w, h), r, GCornersAll);
+    graphics_context_set_fill_color(ctx, GColorDarkGray);
+    graphics_fill_rect(ctx, GRect(x + 1, y + 1, body_w - 2, h - 2), r > 0 ? r - 1 : 0, GCornersAll);
+
+    if (nub_w > 0) {
+        int nub_h = h > 4 ? h - 4 : h;
+        graphics_context_set_fill_color(ctx, GColorBlack);
+        graphics_fill_rect(ctx, GRect(x + body_w, y + (h - nub_h) / 2, nub_w + 1, nub_h), 1, GCornersAll);
+    }
+
+    if (percent > 0) {
+        int fw = ((body_w - 2) * percent) / 100;
+        if (fw > 0) {
+            graphics_context_set_fill_color(ctx, fill_color);
+            graphics_fill_rect(ctx, GRect(x + 1, y + 1, fw, h - 2), r > 0 ? r - 1 : 0, GCornersAll);
+        }
+    }
 }
 
 // ============================================================================
@@ -492,25 +594,38 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
             GColor phone_txt = s_phone_connected ? s_text_color : GColorLightGray;
             GColor phone_bar = s_phone_connected ? p_color      : GColorLightGray;
 
+            // The percentage keeps its bar-mode position always; only the
+            // bar itself is swapped for the time-remaining text (or "..."
+            // while a rate is still being learned) in the same slot.
+            bool p_no_bar = s_batstyle_phone;
+            bool w_no_bar = s_batstyle_watch;
+
             static char pbat_str[12];
-            if (s_phone_battery < 0) {
-                strncpy(pbat_str, "---", sizeof(pbat_str));
-            } else {
-                snprintf(pbat_str, sizeof(pbat_str), "%d%%", s_phone_battery);
-            }
+            if (s_phone_battery < 0) strncpy(pbat_str, "---", sizeof(pbat_str));
+            else snprintf(pbat_str, sizeof(pbat_str), "%d%%", s_phone_battery);
             static char wbat_str[8];
             snprintf(wbat_str, sizeof(wbat_str), "%d%%", s_watch_battery);
 
+            static char ptime_str[16];
+            if (s_pbat_rate != 0) format_battery_time(ptime_str, sizeof(ptime_str), s_phone_battery, s_phone_charging, s_pbat_rate);
+            else strncpy(ptime_str, "...", sizeof(ptime_str));
+            static char wtime_str[16];
+            if (s_wbat_rate != 0) format_battery_time(wtime_str, sizeof(wtime_str), s_watch_battery, s_watch_charging, s_wbat_rate);
+            else strncpy(wtime_str, "...", sizeof(wtime_str));
+
             GFont bat_font = info_font;
             int cx     = W / 2;
-            int bar_y  = ry + 3 + vsh;
-            int bar_h  = 4;
             int txt_y  = ry - 4;    // larger fonts' internal top padding ≈ vsh
             int icon_y = ry - 1 + vsh;
             const int BAT_GAP = 4;
             const int OUT = lx;
             int pw = s_phone_bmp ? gbitmap_get_bounds(s_phone_bmp).size.w : 8;
+            int ph = s_phone_bmp ? gbitmap_get_bounds(s_phone_bmp).size.h : 12;
             int ww = s_watch_bmp ? gbitmap_get_bounds(s_watch_bmp).size.w : 12;
+            int wh = s_watch_bmp ? gbitmap_get_bounds(s_watch_bmp).size.h : 12;
+            // Gauge is as tall as the icon row itself, not a thin sliver.
+            int bar_h = (ph > wh) ? ph : wh;
+            int bar_y = icon_y;
 
             GSize psz = graphics_text_layout_get_content_size(pbat_str, bat_font,
                 GRect(0, 0, 80, 20), GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft);
@@ -526,12 +641,12 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
                     GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, phone_txt);
                 if (s_phone_charging) draw_icon_bmp(ctx, s_charge_bmp, OUT + psz.w + 2, icon_y + 1);
                 if (s_phone_battery >= 0 && bw > 0) {
-                    graphics_context_set_fill_color(ctx, GColorDarkGray);
-                    graphics_fill_rect(ctx, GRect(bx, bar_y, bw, bar_h), 0, GCornerNone);
-                    int fill = bw * s_phone_battery / 100;
-                    if (fill > 0) {
-                        graphics_context_set_fill_color(ctx, phone_bar);
-                        graphics_fill_rect(ctx, GRect(bx, bar_y, fill, bar_h), 0, GCornerNone);
+                    if (p_no_bar) {
+                        draw_shadowed(ctx, ptime_str, bat_font,
+                            GRect(bx, txt_y, bw, info_stride - 3),
+                            GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, phone_txt);
+                    } else {
+                        draw_battery_gauge(ctx, bx, bar_y, bw, bar_h, s_phone_battery, phone_bar);
                     }
                 }
                 draw_icon_bmp(ctx, s_phone_bmp, icon_x, icon_y);
@@ -543,12 +658,12 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
                 int bw     = (txt_l - BAT_GAP) - bx;
                 draw_icon_bmp(ctx, s_watch_bmp, icon_x, icon_y);
                 if (bw > 0) {
-                    graphics_context_set_fill_color(ctx, GColorDarkGray);
-                    graphics_fill_rect(ctx, GRect(bx, bar_y, bw, bar_h), 0, GCornerNone);
-                    int fill = bw * s_watch_battery / 100;
-                    if (fill > 0) {
-                        graphics_context_set_fill_color(ctx, w_color);
-                        graphics_fill_rect(ctx, GRect(bx, bar_y, fill, bar_h), 0, GCornerNone);
+                    if (w_no_bar) {
+                        draw_shadowed(ctx, wtime_str, bat_font,
+                            GRect(bx, txt_y, bw, info_stride - 3),
+                            GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, s_text_color);
+                    } else {
+                        draw_battery_gauge(ctx, bx, bar_y, bw, bar_h, s_watch_battery, w_color);
                     }
                 }
                 draw_shadowed(ctx, wbat_str, bat_font,
@@ -708,6 +823,8 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
 static void battery_callback(BatteryChargeState state) {
     s_watch_battery  = state.charge_percent;
     s_watch_charging = state.is_charging;
+    update_battery_rate(s_watch_battery, &s_wbat_hist_pct, &s_wbat_hist_time, &s_wbat_rate,
+                         PERSIST_WBAT_HIST_PCT, PERSIST_WBAT_HIST_TIME, PERSIST_WBAT_RATE);
     APP_LOG(APP_LOG_LEVEL_INFO, "watch battery: %d%% charging=%s",
             state.charge_percent, state.is_charging ? "true" : "false");
     if (s_canvas_layer) layer_mark_dirty(s_canvas_layer);
@@ -778,6 +895,8 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
         persist_write_int(PERSIST_PHONE_BATTERY, val);
         if (val > 100) { s_phone_charging = true;  s_phone_battery = val - 100; }
         else           { s_phone_charging = false; s_phone_battery = val; }
+        update_battery_rate(s_phone_battery, &s_pbat_hist_pct, &s_pbat_hist_time, &s_pbat_rate,
+                             PERSIST_PBAT_HIST_PCT, PERSIST_PBAT_HIST_TIME, PERSIST_PBAT_RATE);
     }
 
     // Calendar events (pre-formatted strings from the companion JS)
@@ -909,6 +1028,11 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
         s_show_week = (swk->value->int32 != 0);
         persist_write_int(PERSIST_SHOW_WEEK, s_show_week ? 1 : 0);
     }
+
+    Tuple *bsw = dict_find(iterator, MESSAGE_KEY_BATSTYLE_WATCH);
+    if (bsw) { s_batstyle_watch = (bsw->value->int32 != 0); persist_write_int(PERSIST_BATSTYLE_WATCH, s_batstyle_watch ? 1 : 0); }
+    Tuple *bsp = dict_find(iterator, MESSAGE_KEY_BATSTYLE_PHONE);
+    if (bsp) { s_batstyle_phone = (bsp->value->int32 != 0); persist_write_int(PERSIST_BATSTYLE_PHONE, s_batstyle_phone ? 1 : 0); }
 
     // Panel card toggles
     Tuple *cbg = dict_find(iterator, MESSAGE_KEY_CLOCK_BG);
@@ -1078,6 +1202,15 @@ static void load_persist(void) {
     if (s_step_goal < 0) s_step_goal = 0;
 
     s_show_week = persist_exists(PERSIST_SHOW_WEEK) ? (persist_read_int(PERSIST_SHOW_WEEK) != 0) : false;
+
+    s_batstyle_watch = persist_exists(PERSIST_BATSTYLE_WATCH) ? (persist_read_int(PERSIST_BATSTYLE_WATCH) != 0) : false;
+    s_batstyle_phone = persist_exists(PERSIST_BATSTYLE_PHONE) ? (persist_read_int(PERSIST_BATSTYLE_PHONE) != 0) : false;
+    s_wbat_hist_pct  = persist_exists(PERSIST_WBAT_HIST_PCT)  ? persist_read_int(PERSIST_WBAT_HIST_PCT)  : -1;
+    s_wbat_hist_time = persist_exists(PERSIST_WBAT_HIST_TIME) ? (time_t)persist_read_int(PERSIST_WBAT_HIST_TIME) : 0;
+    s_wbat_rate      = persist_exists(PERSIST_WBAT_RATE)      ? persist_read_int(PERSIST_WBAT_RATE)      : 0;
+    s_pbat_hist_pct  = persist_exists(PERSIST_PBAT_HIST_PCT)  ? persist_read_int(PERSIST_PBAT_HIST_PCT)  : -1;
+    s_pbat_hist_time = persist_exists(PERSIST_PBAT_HIST_TIME) ? (time_t)persist_read_int(PERSIST_PBAT_HIST_TIME) : 0;
+    s_pbat_rate      = persist_exists(PERSIST_PBAT_RATE)      ? persist_read_int(PERSIST_PBAT_RATE)      : 0;
     s_clock_bg  = persist_exists(PERSIST_CLOCK_BG)  ? (persist_read_int(PERSIST_CLOCK_BG)  != 0) : false;
     s_info_bg   = persist_exists(PERSIST_INFO_BG)   ? (persist_read_int(PERSIST_INFO_BG)   != 0) : true;
     s_cal_bg    = persist_exists(PERSIST_CAL_BG)    ? (persist_read_int(PERSIST_CAL_BG)    != 0) : true;

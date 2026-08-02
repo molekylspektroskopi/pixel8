@@ -1,5 +1,16 @@
 # Changelog
 
+## v3.21.0
+- Battery row: watch and phone can each independently show estimated time
+  remaining in place of the bar, derived on-watch from a smoothed %/hour
+  rate tracked across battery readings — no reliance on unsupported phone
+  battery-time APIs. The percentage keeps its normal bar-mode position;
+  only the bar itself swaps for the estimate text (or "..." while a rate
+  is still being learned), so switching modes never moves the % around
+- Battery bar redesigned: chunky pixel-art gauge (black shell, terminal nub,
+  gradient fill), as tall as the phone/watch icon row, replacing the old
+  thin flat two-tone strip
+
 ## v3.20.2
 - Optimization pass: wallpaper receive buffer heap-allocated only during transfers
   (−32 KB static RAM), AppMessage inbox right-sized, webpack source map stripped

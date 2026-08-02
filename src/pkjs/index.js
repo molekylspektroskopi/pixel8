@@ -729,6 +729,9 @@ Pebble.addEventListener('webviewclosed', function (e) {
   var SHOW_KEYS = ['SHOW_BATTERY', 'SHOW_STEPS', 'SHOW_WEATHER', 'SHOW_CALENDAR'];
   SHOW_KEYS.forEach(function (k) { payload[k] = (s[k] !== false) ? 1 : 0; });
 
+  payload['BATSTYLE_WATCH'] = (s.BATSTYLE_WATCH === 'true') ? 1 : 0;
+  payload['BATSTYLE_PHONE'] = (s.BATSTYLE_PHONE === 'true') ? 1 : 0;
+
   var calRows = parseInt(s.CALENDAR_ROWS || '3', 10);
   payload['CALENDAR_ROWS'] = (calRows >= 1 && calRows <= 5) ? calRows : 3;
 

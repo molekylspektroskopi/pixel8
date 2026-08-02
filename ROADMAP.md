@@ -17,6 +17,8 @@ Progress map and future ideas for the Pixel8 watchface (Pebble Time 2 / emery).
 - [x] Multi-day event date range (right-aligned on same row)
 
 ### Settings
+- [x] Battery row: watch/phone can each show estimated time remaining instead
+  of a percentage bar (v3.21)
 - [x] Week number toggle on the date row (v.28) (v3.20)
 - [x] Per-panel card backgrounds: clock card new, info/calendar cards can be turned off (v3.20)
 - [x] Per-panel content padding, X and Y separately (v3.20)
@@ -99,6 +101,7 @@ Progress map and future ideas for the Pixel8 watchface (Pebble Time 2 / emery).
 
 | Version | Summary |
 |---------|---------|
+| v3.21.0 | Battery row: optional estimated time remaining (watch/phone independently), redesigned pixel-art battery gauge |
 | v3.20.2 | Optimization pass: wallpaper buffer heap-allocated per transfer (−32 KB static RAM), right-sized AppMessage inbox, source map stripped from pbw (187→99 KB), leaner per-minute redraw (4-offset outline, pre-parsed weather, cached clock measurements), health polled only for visible rows |
 | v3.20.1 | Calendar rows setting gained the missing 4-row option |
 | v3.20.0 | Week number toggle; clock card + per-panel card toggles; per-panel padding; custom Today/Tomorrow labels; info/calendar font size (14/18/24 px) with row-fit clamping; dropped unused pebble-clay |
