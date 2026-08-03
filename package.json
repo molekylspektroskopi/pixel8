@@ -1,7 +1,7 @@
 {
   "name": "pixel8",
   "author": "nihplod",
-  "version": "3.21.1",
+  "version": "3.22.0",
   "keywords": [
     "pebble-app"
   ],
@@ -68,9 +68,7 @@
       "CAL_PAD_X",
       "CAL_PAD_Y",
       "INFO_FONT_PX",
-      "CAL_FONT_PX",
-      "BATSTYLE_WATCH",
-      "BATSTYLE_PHONE"
+      "CAL_FONT_PX"
     ],
     "resources": {
       "media": [

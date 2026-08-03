@@ -19,8 +19,8 @@ full-screen pixel-art wallpapers with floating 3D info cards.
 - **Clock panel** — time (LECO 38), date in 4 formats, optional ISO week number
   (`v.28`), AM/PM in 12h mode. Optional card background that hugs the text width.
 - **Info panel** — four sortable, individually toggleable rows:
-  - *Battery*: phone + watch, each shown as a color-gradient pixel gauge or
-    (independently) an estimated time remaining, plus a charging bolt icon
+  - *Battery*: phone + watch, each shown as a chunky pixel-art gauge with a
+    color gradient fill, plus a charging bolt icon
   - *Steps*: today's steps, distance, heart rate; row turns green at your step goal
   - *Weather*: current + up to 3 forecast columns (N hours ahead, tomorrow, day+2)
     with pixel icons — powered by [Open-Meteo](https://open-meteo.com/), no API key

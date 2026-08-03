@@ -130,18 +130,6 @@ input[type=password]{letter-spacing:.1em}
       </select>
     </div>
     <div class="row"><span class="lbl">Battery row</span><div class="tog-wrap"><label class="tog"><input type="checkbox" id="SHOW_BATTERY"><span class="track"></span></label></div></div>
-    <div class="row"><span class="lbl">Watch battery<div class="sub">Show as time remaining instead of a bar. Takes a day or two of wear to learn your drain rate — shows "..." until then</div></span>
-      <select id="BATSTYLE_WATCH">
-        <option value="false">Percentage bar</option>
-        <option value="true">Time remaining</option>
-      </select>
-    </div>
-    <div class="row"><span class="lbl">Phone battery<div class="sub">Show as time remaining instead of a bar. Learns faster than the watch (finer battery readings) but still needs some hours of history</div></span>
-      <select id="BATSTYLE_PHONE">
-        <option value="false">Percentage bar</option>
-        <option value="true">Time remaining</option>
-      </select>
-    </div>
     <div class="row"><span class="lbl">Steps &amp; distance row</span><div class="tog-wrap"><label class="tog"><input type="checkbox" id="SHOW_STEPS"><span class="track"></span></label></div></div>
     <div class="row"><span class="lbl">Step goal<div class="sub">Row turns green when reached</div></span>
       <select id="STEP_GOAL">
@@ -395,8 +383,6 @@ function init(){
   document.getElementById('SHOW_SLEEP').checked    = get('SHOW_SLEEP',   false) === true;
   setSelect('STEP_GOAL', get('STEP_GOAL', '0'));
   document.getElementById('SHOW_BATTERY').checked  = get('SHOW_BATTERY', true)  !== false;
-  setSelect('BATSTYLE_WATCH', get('BATSTYLE_WATCH', 'false'));
-  setSelect('BATSTYLE_PHONE', get('BATSTYLE_PHONE', 'false'));
   document.getElementById('SHOW_STEPS').checked    = get('SHOW_STEPS',   true)  !== false;
   document.getElementById('SHOW_WEATHER').checked  = showWx;
   document.getElementById('SHOW_CALENDAR').checked = showCal;
@@ -467,8 +453,6 @@ function save(){
     SHOW_SLEEP:         document.getElementById('SHOW_SLEEP').checked,
     STEP_GOAL:          document.getElementById('STEP_GOAL').value,
     SHOW_BATTERY:       document.getElementById('SHOW_BATTERY').checked,
-    BATSTYLE_WATCH:     document.getElementById('BATSTYLE_WATCH').value,
-    BATSTYLE_PHONE:     document.getElementById('BATSTYLE_PHONE').value,
     SHOW_STEPS:         document.getElementById('SHOW_STEPS').checked,
     SHOW_WEATHER:       document.getElementById('SHOW_WEATHER').checked,
     SHOW_CALENDAR:      document.getElementById('SHOW_CALENDAR').checked,

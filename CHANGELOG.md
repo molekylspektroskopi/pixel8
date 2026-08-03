@@ -1,5 +1,12 @@
 # Changelog
 
+## v3.22.0
+- Removed the battery time-remaining estimate feature (watch/phone settings,
+  on-watch rate tracking, persisted history) — the periodic rate-tracking
+  writes measurably increased battery drain, and the estimates stayed
+  unreliable even after the v3.21.1 accuracy fix. Battery rows are now
+  always the pixel-art percentage gauge introduced in v3.21.0
+
 ## v3.21.1
 - Fixed battery time-remaining estimate being wildly too pessimistic: the
   on-watch rate tracker was resetting its reference point on every battery
