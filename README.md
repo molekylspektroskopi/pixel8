@@ -29,8 +29,9 @@ full-screen pixel-art wallpapers with floating 3D info cards.
   Calendar, Nextcloud, Apple Calendar, …), with multi-day ranges right-aligned and
   customisable "Today"/"Tomorrow" labels (NOW, TMR, Idag, …). Events also become
   Timeline pins with an *Open Agenda* action.
-- **Wallpaper** — a solid colour, a PNG fetched from any URL, or a `.list` file
-  that rotates through a different image each day.
+- **Wallpaper** — a solid colour, a PNG uploaded directly from the settings
+  page, a PNG fetched from any URL, or a `.list` file that rotates through a
+  different image each day.
 - **Layout** — the three panels can be reordered or hidden; the bottom panel is
   anchored to the screen edge. Per-panel card toggle, padding (0–24 px), and font
   size (14/18/24 px) with smart row fitting — larger fonts work great with CJK
@@ -76,17 +77,42 @@ copy the example and fill in your feed (the real file is git-ignored):
 cp src/pkjs/calendar_config.example.js src/pkjs/calendar_config.js
 ```
 
-### Hosting wallpapers
+### Wallpaper images
 
-Wallpapers are fetched by the phone and streamed to the watch, so they must be
-small indexed-colour PNGs (≤32 KB):
+Whether uploaded from the settings page or fetched from a URL, wallpapers must
+be small indexed-colour PNGs, exactly 200×228 px, ≤32 KB. The settings page
+checks all three when you upload and rejects anything that doesn't match, so
+it's worth getting the export right up front rather than guessing.
+
+**macOS / Linux**, with [ImageMagick](https://imagemagick.org/) installed:
 
 ```bash
 magick input.png -resize 200x228! -colors 64 -type Palette wallpaper.png
 ```
 
-For a daily rotation, host a `file.list` next to the images containing one image
-URL (or relative filename) per line, and point the wallpaper URL setting at the
+**Windows**, same command, via [ImageMagick](https://imagemagick.org/script/download.php#windows):
+
+```powershell
+winget install ImageMagick.ImageMagick
+magick input.png -resize 200x228! -colors 64 -type Palette wallpaper.png
+```
+
+(Open a new PowerShell/cmd window after installing so the updated PATH takes effect.)
+
+**No command line?** Use free [GIMP](https://www.gimp.org/) (Windows/macOS/Linux):
+
+1. Open your image, then **Image → Scale Image…**. Set width to `200` and
+   height to `228`, click the chain-link icon so it's broken (unlinked) so
+   both apply independently, then Scale — this matches what the command
+   above does (stretches to fill exactly, ignoring the original aspect ratio).
+2. **Image → Mode → Indexed…** → *Generate optimum palette*, 64 colors → Convert.
+3. **File → Export As…**, name it `wallpaper.png`, export. Check the file size
+   afterwards — if it's over 32 KB, redo step 2 with fewer colors (e.g. 32).
+
+No hosting needed if you upload the file directly in settings — it's streamed
+to the watch the same way a URL wallpaper is. For a daily rotation you still
+need a URL: host a `file.list` next to the images containing one image URL (or
+relative filename) per line, and point the wallpaper URL setting at the
 `.list` file.
 
 ## Architecture notes

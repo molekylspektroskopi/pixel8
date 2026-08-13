@@ -19,6 +19,7 @@ h1{text-align:center;padding:24px 0 4px;font-size:22px;font-weight:700;letter-sp
 .sec-body{display:none;border-top:1px solid var(--border)}
 .sec.open .sec-body{display:block}
 .opt-dimmed{opacity:.4;pointer-events:none}
+.txt-btn{color:var(--accent);font-size:13px;cursor:pointer;margin-top:2px;display:inline-block}
 
 /* Rows */
 .row{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-top:1px solid var(--border);min-height:46px}
@@ -257,9 +258,15 @@ input[type=password]{letter-spacing:.1em}
   <div class="sec-hdr" onclick="accordion(this)">Wallpaper<span class="chev">›</span></div>
   <div class="sec-body">
     <div class="row"><span class="lbl">Background color</span><button class="cswatch" id="sw-BG_COLOR" onclick="openPicker('BG_COLOR','Background color')"></button></div>
-    <div class="row col">
+    <div class="row col" id="wp-url-row">
       <span class="lbl">Wallpaper URL<div class="sub">Direct PNG (200×228 px, max 32 KB) or .list URL with one PNG URL per line for daily rotation</div></span>
       <input class="inp" type="text" placeholder="https://example.com/bg.png" id="WALLPAPER_URL" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
+    </div>
+    <div class="row col">
+      <span class="lbl">Upload image<div class="sub">Sends a PNG straight to the watch — no hosting needed. Must be exactly 200×228 px, indexed/palette color, max 32 KB:<br><code>magick input.png -resize 200x228! -colors 64 -type Palette wallpaper.png</code><br>Overrides the URL above while set.</div></span>
+      <input class="inp" type="file" accept="image/png" id="WALLPAPER_FILE">
+      <div class="sub" id="wp-file-status"></div>
+      <span class="txt-btn" id="wp-clear-btn" onclick="clearWallpaperUpload()" style="display:none">Remove uploaded image</span>
     </div>
   </div>
 </div>
@@ -441,6 +448,8 @@ function init(){
   document.getElementById('CALENDAR_PASS_2').value = get('CALENDAR_PASS_2','');
 
   document.getElementById('WALLPAPER_URL').value = get('WALLPAPER_URL','');
+  wallpaperData = get('WALLPAPER_DATA','');
+  updateWallpaperStatus();
 }
 
 /* ── Save ──────────────────────────────────────────────────── */
@@ -489,10 +498,76 @@ function save(){
     CALENDAR_URL_2:     useCal2  ? document.getElementById('CALENDAR_URL_2').value.trim() : '',
     CALENDAR_USER_2:    (useCal2 && useAuth2) ? document.getElementById('CALENDAR_USER_2').value : '',
     CALENDAR_PASS_2:    (useCal2 && useAuth2) ? document.getElementById('CALENDAR_PASS_2').value : '',
-    WALLPAPER_URL:      document.getElementById('WALLPAPER_URL').value.trim()
+    WALLPAPER_URL:      document.getElementById('WALLPAPER_URL').value.trim(),
+    WALLPAPER_DATA:     wallpaperData
   };
   location.href = 'pebblejs://close#' + encodeURIComponent(JSON.stringify(s));
 }
+
+/* ── Wallpaper upload ──────────────────────────────────────── */
+// Uploaded images must already be exactly the format the watch expects — no
+// resizing/quantizing here, since guessing at that would silently produce a
+// worse result than the documented `magick` command. We just validate.
+var wallpaperData = '';
+function validateWallpaperPng(bytes){
+  if (bytes.length < 24 || bytes[0]!==0x89 || bytes[1]!==0x50 || bytes[2]!==0x4E || bytes[3]!==0x47)
+    return 'Not a valid PNG file.';
+  if (bytes.length > 32768)
+    return 'File is ' + Math.round(bytes.length/1024) + ' KB — must be 32 KB or smaller. Re-export as an indexed-color PNG with the command below.';
+  var w = ((bytes[16]<<24) | (bytes[17]<<16) | (bytes[18]<<8) | bytes[19]) >>> 0;
+  var h = ((bytes[20]<<24) | (bytes[21]<<16) | (bytes[22]<<8) | bytes[23]) >>> 0;
+  if (w !== 200 || h !== 228)
+    return 'Image is ' + w + '×' + h + ' px — must be exactly 200×228 px. Re-export with the command below.';
+  return null;
+}
+function arrayBufferToBase64(bytes){
+  var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  var out = '';
+  for (var i = 0; i < bytes.length; i += 3) {
+    var b0 = bytes[i], b1 = bytes[i+1], b2 = bytes[i+2];
+    var n = (b0 << 16) | ((b1||0) << 8) | (b2||0);
+    out += chars[(n >> 18) & 63] + chars[(n >> 12) & 63];
+    out += (i+1 < bytes.length) ? chars[(n >> 6) & 63] : '=';
+    out += (i+2 < bytes.length) ? chars[n & 63] : '=';
+  }
+  return out;
+}
+function updateWallpaperStatus(){
+  var statusEl = document.getElementById('wp-file-status');
+  var clearBtn = document.getElementById('wp-clear-btn');
+  if (wallpaperData) {
+    var kb = Math.round(wallpaperData.length * 3 / 4 / 1024 * 10) / 10;
+    statusEl.textContent = 'Using uploaded image (~' + kb + ' KB) — sent on next Save';
+    clearBtn.style.display = 'inline-block';
+  } else {
+    statusEl.textContent = '';
+    clearBtn.style.display = 'none';
+  }
+  dimOpts('wp-url-row', !wallpaperData);
+}
+function clearWallpaperUpload(){
+  wallpaperData = '';
+  document.getElementById('WALLPAPER_FILE').value = '';
+  updateWallpaperStatus();
+}
+document.getElementById('WALLPAPER_FILE').addEventListener('change', function(e){
+  var f = e.target.files && e.target.files[0];
+  if (!f) return;
+  var reader = new FileReader();
+  reader.onload = function(){
+    var bytes = new Uint8Array(reader.result);
+    var err = validateWallpaperPng(bytes);
+    if (err) {
+      alert(err);
+      e.target.value = '';
+      return;
+    }
+    wallpaperData = arrayBufferToBase64(bytes);
+    updateWallpaperStatus();
+  };
+  reader.onerror = function(){ alert('Could not read the selected file.'); };
+  reader.readAsArrayBuffer(f);
+});
 
 /* ── Layout sort (Clock / Info / Calendar) ─────────────────── */
 var LAYOUT_PERMS = [[0,1,2],[0,2,1],[1,0,2],[1,2,0],[2,0,1],[2,1,0]];

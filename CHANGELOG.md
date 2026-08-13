@@ -1,5 +1,14 @@
 # Changelog
 
+## v3.23.0
+- Wallpaper can now be uploaded directly from the settings page instead of
+  hosting a URL — pick a PNG on your phone and it's sent straight to the
+  watch over Bluetooth using the same chunked transfer as URL wallpapers.
+  The file must already be exactly 200×228 px, indexed/palette color, and
+  32 KB or smaller (same requirements as the URL flow); the settings page
+  validates and rejects anything else rather than silently downscaling it.
+  Uploading an image overrides the wallpaper URL while it's set
+
 ## v3.22.0
 - Removed the battery time-remaining estimate feature (watch/phone settings,
   on-watch rate tracking, persisted history) — the periodic rate-tracking

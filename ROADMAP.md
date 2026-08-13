@@ -33,6 +33,7 @@ Progress map and future ideas for the Pixel8 watchface (Pebble Time 2 / emery).
 - [x] Dual calendar feeds (merged + deduped by UID)
 
 ### Wallpaper
+- [x] Upload a wallpaper PNG directly from settings, no hosting needed (v3.23)
 - [x] Dynamic wallpaper from URL (PNG, 200×228, max ~32 KB)
 - [x] Daily rotation via `.list` file (one URL per line, rotates by day index)
 - [x] Relative URLs in .list resolved against list URL directory
@@ -99,6 +100,7 @@ Progress map and future ideas for the Pixel8 watchface (Pebble Time 2 / emery).
 
 | Version | Summary |
 |---------|---------|
+| v3.23.0 | Wallpaper can be uploaded directly from settings (validated 200×228 indexed PNG, ≤32 KB) instead of requiring a hosted URL; sent to the watch via the existing chunked BT transfer |
 | v3.22.0 | Removed battery time-remaining estimate (settings + on-watch rate tracking) — cost more battery than it was worth and stayed unreliable; battery rows are always the pixel-art percentage gauge now |
 | v3.21.1 | Fixed battery time-remaining estimate overstating drain rate (anchor was resetting on no-op ticks); settings page notes the learning period |
 | v3.21.0 | Battery row: optional estimated time remaining (watch/phone independently), redesigned pixel-art battery gauge |

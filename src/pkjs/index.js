@@ -220,6 +220,24 @@ function refreshWeather(force) {
 var WP_CHUNK = 1800;  // bytes per AppMessage chunk (inbox opened at max size)
 var wpInFlight = false;  // prevents concurrent wallpaper transfers
 
+// Decodes the base64 PNG the settings page embeds for an uploaded (as
+// opposed to URL-fetched) wallpaper. atob() isn't guaranteed in PebbleKit JS.
+function base64ToArrayBuffer(b64) {
+  var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  var clean = (b64 || '').replace(/[^A-Za-z0-9+/=]/g, '');
+  var bytes = [];
+  for (var i = 0; i < clean.length; i += 4) {
+    var c0 = chars.indexOf(clean[i]);
+    var c1 = chars.indexOf(clean[i + 1]);
+    var c2 = chars.indexOf(clean[i + 2]);
+    var c3 = chars.indexOf(clean[i + 3]);
+    bytes.push((c0 << 2) | (c1 >> 4));
+    if (clean[i + 2] !== '=' && c2 !== -1) bytes.push(((c1 & 15) << 4) | (c2 >> 2));
+    if (clean[i + 3] !== '=' && c3 !== -1) bytes.push(((c2 & 3) << 6) | c3);
+  }
+  return new Uint8Array(bytes).buffer;
+}
+
 function sendWpChunk(buf, offset, total, retries) {
   if (retries === undefined) retries = 0;
   if (offset >= total) {
@@ -313,13 +331,18 @@ function fetchWallpaperList(listUrl) {
 function refreshWallpaper(force) {
   if (wpInFlight) { console.log('Pixel8: wallpaper already in flight, skipping'); return; }
   var s = claySettings();
+  var data = s.WALLPAPER_DATA || '';
   var url = (s.WALLPAPER_URL || '').trim();
-  if (!url) return;
+  if (!data && !url) return;
   var last = parseInt(lsGet('wpFetchedAt') || '0', 10);
   if (!force && (Date.now() - last) < 86400000) return;   // once per day
   lsSet('wpFetchedAt', '' + Date.now());
   wpInFlight = true;
-  if (/\.list$/i.test(url)) {
+  if (data) {
+    // Uploaded image: settings.html already validated PNG/size/dimensions,
+    // takes precedence over WALLPAPER_URL when both are set.
+    sendWallpaper(base64ToArrayBuffer(data));
+  } else if (/\.list$/i.test(url)) {
     fetchWallpaperList(url);
   } else {
     fetchWallpaperImage(url);
