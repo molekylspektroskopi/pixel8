@@ -1,5 +1,7 @@
 Pixel8 is a feature-rich watchface for every Pebble: Pebble Time 2, Pebble Time / Time Steel, Pebble Time Round, Pebble 2, the original Pebble / Pebble Steel, and the newer Rebble-made flint and gabbro. It shows the time and date, phone and watch battery levels, step count with heart rate, sleep duration, weather forecast, and upcoming calendar events — all on a customisable background.
 
+Pixel8 is developed and daily-driven on a Pebble Time 2, which gets the most testing on real hardware. Support for the other platforms was added and verified in the Pebble SDK emulator rather than on physical devices, so if something looks or behaves oddly on your specific watch, please report it.
+
 Three major panels — Clock, Info, and Calendar — can be freely reordered by dragging in the settings page, or hidden entirely. The bottom panel is always anchored to the screen edge. The clock panel can be hidden for a minimal data-only layout.
 
 The Info panel has four sortable, individually toggleable rows:

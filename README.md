@@ -10,6 +10,11 @@ Pebble Time / Time Steel (basalt), Pebble Time Round (chalk), Pebble 2 (diorite)
 the original Pebble / Pebble Steel (aplite), and the newer Rebble-made flint
 and gabbro.
 
+Developed and daily-driven on a Pebble Time 2 — that's the platform with real
+hardware testing. The other six platforms were added and verified in the
+Pebble SDK emulator only (no other physical devices on hand); see
+[Architecture notes](#architecture-notes) below for how.
+
 [**Get it on the Rebble store**](https://apps.rePebble.com/90a5c4131c6444bf9d5def66)
 
 ![default layout](screenshots/emery_1_default_week.png)
@@ -162,6 +167,15 @@ wallpaper URL setting at the `.list` file.
 
 Calendar events are formatted on the phone and sent as ready-to-draw strings
 (UTF-8 byte-aware truncation, so CJK text never overflows the watch buffer).
+
+### Multi-platform testing
+
+Only emery gets real hardware testing. The other six platforms are verified with
+`pebble install --emulator <platform>` and `pebble screenshot --emulator <platform>`
+— including wallpaper transfers, injected by replaying the WP_TOTAL/WP_DATA/WP_DONE
+AppMessage sequence directly via `pebble send-app-message` with the numeric keys
+from `build/js/message_keys.json`, which exercises the same on-watch decode/draw
+path a real phone connection would.
 
 ## Version history
 
