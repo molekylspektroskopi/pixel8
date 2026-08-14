@@ -111,6 +111,7 @@ Pebble platforms: emery, basalt, chalk, diorite, aplite, flint, gabbro.
 
 | Version | Summary |
 |---------|---------|
+| v3.25.1 | No code changes — store listing note (Time 2 is hardware-tested, others emulator-only) + re-uploaded Time 2 screenshots |
 | v3.25.0 | Multi-platform support: basalt, chalk, diorite, aplite, flint, gabbro added alongside emery — round-safe layout, B&W rendering fix, per-platform wallpaper sizing |
 | v3.24.0 | Wallpaper rotation between two images (or two URLs) at configurable day/night times, checked roughly once an hour; uploads still take priority over URLs |
 | v3.23.0 | Wallpaper can be uploaded directly from settings (validated 200×228 indexed PNG, ≤32 KB) instead of requiring a hosted URL; sent to the watch via the existing chunked BT transfer |
