@@ -260,13 +260,26 @@ input[type=password]{letter-spacing:.1em}
     <div class="row"><span class="lbl">Background color</span><button class="cswatch" id="sw-BG_COLOR" onclick="openPicker('BG_COLOR','Background color')"></button></div>
     <div class="row col" id="wp-url-row">
       <span class="lbl">Wallpaper URL<div class="sub">Direct PNG (200×228 px, max 32 KB) or .list URL with one PNG URL per line for daily rotation</div></span>
-      <input class="inp" type="text" placeholder="https://example.com/bg.png" id="WALLPAPER_URL" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
+      <input class="inp" type="text" placeholder="https://example.com/day.png" id="WALLPAPER_URL" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" oninput="updateWallpaperStatus()">
+      <span class="lbl" style="margin-top:8px">Second URL<div class="sub">Optional — same rules as above, rotates with the URL above at set times, e.g. a day URL and a night URL.</div></span>
+      <input class="inp" type="text" placeholder="https://example.com/night.png" id="WALLPAPER_URL2" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" oninput="updateWallpaperStatus()">
     </div>
     <div class="row col">
       <span class="lbl">Upload image<div class="sub">Sends a PNG straight to the watch — no hosting needed. Must be exactly 200×228 px, indexed/palette color, max 32 KB:<br><code>magick input.png -resize 200x228! -colors 64 -type Palette wallpaper.png</code><br>Overrides the URL above while set.</div></span>
       <input class="inp" type="file" accept="image/png" id="WALLPAPER_FILE">
       <div class="sub" id="wp-file-status"></div>
       <span class="txt-btn" id="wp-clear-btn" onclick="clearWallpaperUpload()" style="display:none">Remove uploaded image</span>
+    </div>
+    <div class="row col" id="wp-file2-row">
+      <span class="lbl">Second image<div class="sub">Optional — upload a second PNG (same format requirements) to rotate with the one above at set times, e.g. a day image and a night image.</div></span>
+      <input class="inp" type="file" accept="image/png" id="WALLPAPER_FILE2">
+      <div class="sub" id="wp-file2-status"></div>
+      <span class="txt-btn" id="wp-clear-btn2" onclick="clearWallpaperUpload2()" style="display:none">Remove second image</span>
+    </div>
+    <div class="row col" id="wp-rotate-row" style="display:none">
+      <span class="lbl">Rotation times<div class="sub">Two images or two URLs: the first shows from "Day starts" until "Night starts", the second the rest of the time (uploaded images take priority over URLs). A single .list URL: "Day starts" is the time of day it advances to the next image in the list instead of the moment the phone happens to check ("Night starts" is unused). Checked about once an hour, so the switch can lag the set time by up to an hour.</div></span>
+      <div class="row"><span class="lbl">Day starts</span><input class="inp num" type="time" style="width:120px" id="WALLPAPER_DAY_START"></div>
+      <div class="row"><span class="lbl">Night starts</span><input class="inp num" type="time" style="width:120px" id="WALLPAPER_NIGHT_START"></div>
     </div>
   </div>
 </div>
@@ -448,7 +461,11 @@ function init(){
   document.getElementById('CALENDAR_PASS_2').value = get('CALENDAR_PASS_2','');
 
   document.getElementById('WALLPAPER_URL').value = get('WALLPAPER_URL','');
+  document.getElementById('WALLPAPER_URL2').value = get('WALLPAPER_URL2','');
   wallpaperData = get('WALLPAPER_DATA','');
+  wallpaperData2 = get('WALLPAPER_DATA2','');
+  document.getElementById('WALLPAPER_DAY_START').value   = get('WALLPAPER_DAY_START','07:00');
+  document.getElementById('WALLPAPER_NIGHT_START').value = get('WALLPAPER_NIGHT_START','20:00');
   updateWallpaperStatus();
 }
 
@@ -499,7 +516,11 @@ function save(){
     CALENDAR_USER_2:    (useCal2 && useAuth2) ? document.getElementById('CALENDAR_USER_2').value : '',
     CALENDAR_PASS_2:    (useCal2 && useAuth2) ? document.getElementById('CALENDAR_PASS_2').value : '',
     WALLPAPER_URL:      document.getElementById('WALLPAPER_URL').value.trim(),
-    WALLPAPER_DATA:     wallpaperData
+    WALLPAPER_URL2:     document.getElementById('WALLPAPER_URL2').value.trim(),
+    WALLPAPER_DATA:     wallpaperData,
+    WALLPAPER_DATA2:    wallpaperData2,
+    WALLPAPER_DAY_START:   document.getElementById('WALLPAPER_DAY_START').value   || '07:00',
+    WALLPAPER_NIGHT_START: document.getElementById('WALLPAPER_NIGHT_START').value || '20:00'
   };
   location.href = 'pebblejs://close#' + encodeURIComponent(JSON.stringify(s));
 }
@@ -509,6 +530,7 @@ function save(){
 // resizing/quantizing here, since guessing at that would silently produce a
 // worse result than the documented `magick` command. We just validate.
 var wallpaperData = '';
+var wallpaperData2 = '';
 function validateWallpaperPng(bytes){
   if (bytes.length < 24 || bytes[0]!==0x89 || bytes[1]!==0x50 || bytes[2]!==0x4E || bytes[3]!==0x47)
     return 'Not a valid PNG file.';
@@ -532,26 +554,51 @@ function arrayBufferToBase64(bytes){
   }
   return out;
 }
+function wpStatusText(data){
+  var kb = Math.round(data.length * 3 / 4 / 1024 * 10) / 10;
+  return 'Using uploaded image (~' + kb + ' KB) — sent on next Save';
+}
 function updateWallpaperStatus(){
   var statusEl = document.getElementById('wp-file-status');
   var clearBtn = document.getElementById('wp-clear-btn');
   if (wallpaperData) {
-    var kb = Math.round(wallpaperData.length * 3 / 4 / 1024 * 10) / 10;
-    statusEl.textContent = 'Using uploaded image (~' + kb + ' KB) — sent on next Save';
+    statusEl.textContent = wpStatusText(wallpaperData);
     clearBtn.style.display = 'inline-block';
   } else {
     statusEl.textContent = '';
     clearBtn.style.display = 'none';
   }
-  dimOpts('wp-url-row', !wallpaperData);
+  dimOpts('wp-url-row', !(wallpaperData || wallpaperData2));
+
+  var statusEl2 = document.getElementById('wp-file2-status');
+  var clearBtn2 = document.getElementById('wp-clear-btn2');
+  if (wallpaperData2) {
+    statusEl2.textContent = wpStatusText(wallpaperData2);
+    clearBtn2.style.display = 'inline-block';
+  } else {
+    statusEl2.textContent = '';
+    clearBtn2.style.display = 'none';
+  }
+
+  var url1 = document.getElementById('WALLPAPER_URL').value.trim();
+  var url2 = document.getElementById('WALLPAPER_URL2').value.trim();
+  var dataRotates = !!(wallpaperData && wallpaperData2);
+  var urlRotates  = !!(url1 && url2);
+  var hasList     = /\.list$/i.test(url1) || /\.list$/i.test(url2);
+  document.getElementById('wp-rotate-row').style.display = (dataRotates || urlRotates || hasList) ? '' : 'none';
 }
 function clearWallpaperUpload(){
   wallpaperData = '';
   document.getElementById('WALLPAPER_FILE').value = '';
   updateWallpaperStatus();
 }
-document.getElementById('WALLPAPER_FILE').addEventListener('change', function(e){
-  var f = e.target.files && e.target.files[0];
+function clearWallpaperUpload2(){
+  wallpaperData2 = '';
+  document.getElementById('WALLPAPER_FILE2').value = '';
+  updateWallpaperStatus();
+}
+function readWallpaperFile(input, onOk){
+  var f = input.files && input.files[0];
   if (!f) return;
   var reader = new FileReader();
   reader.onload = function(){
@@ -559,14 +606,19 @@ document.getElementById('WALLPAPER_FILE').addEventListener('change', function(e)
     var err = validateWallpaperPng(bytes);
     if (err) {
       alert(err);
-      e.target.value = '';
+      input.value = '';
       return;
     }
-    wallpaperData = arrayBufferToBase64(bytes);
-    updateWallpaperStatus();
+    onOk(arrayBufferToBase64(bytes));
   };
   reader.onerror = function(){ alert('Could not read the selected file.'); };
   reader.readAsArrayBuffer(f);
+}
+document.getElementById('WALLPAPER_FILE').addEventListener('change', function(e){
+  readWallpaperFile(e.target, function(b64){ wallpaperData = b64; updateWallpaperStatus(); });
+});
+document.getElementById('WALLPAPER_FILE2').addEventListener('change', function(e){
+  readWallpaperFile(e.target, function(b64){ wallpaperData2 = b64; updateWallpaperStatus(); });
 });
 
 /* ── Layout sort (Clock / Info / Calendar) ─────────────────── */

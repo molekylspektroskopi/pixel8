@@ -307,7 +307,19 @@ function fetchWallpaperImage(url) {
   xhr.send();
 }
 
-function fetchWallpaperList(listUrl) {
+// "Which calendar day is it" for .list rotation, anchored to rotateAtMinutes
+// local time instead of UTC midnight — so a .list advances at a predictable,
+// user-chosen time instead of whenever the day's UTC boundary happens to be
+// (which usually isn't midnight in the user's own timezone). getTimezoneOffset()
+// converts the epoch timestamp to "local wall-clock as if it were UTC" so the
+// division below buckets by local calendar day.
+function localDayIndex(rotateAtMinutes) {
+  var now = new Date();
+  var localMs = now.getTime() - now.getTimezoneOffset() * 60000;
+  return Math.floor((localMs - rotateAtMinutes * 60000) / 86400000);
+}
+
+function fetchWallpaperList(listUrl, rotateAtMinutes) {
   var xhr = new XMLHttpRequest();
   xhr.open('GET', listUrl, true);
   xhr.onload = function() {
@@ -316,34 +328,90 @@ function fetchWallpaperList(listUrl) {
       .map(function(l) { return l.trim(); })
       .filter(function(l) { return l.length > 0 && l[0] !== '#'; });
     if (!lines.length) { console.log('Pixel8: wallpaper list empty'); return; }
-    var day = Math.floor(Date.now() / 86400000);
-    var picked = lines[day % lines.length];
+    var day = localDayIndex(rotateAtMinutes);
+    var idx = ((day % lines.length) + lines.length) % lines.length;
+    var picked = lines[idx];
     // Resolve relative paths against the list URL's directory
     var url = picked.match(/^https?:\/\//) ? picked
               : listUrl.replace(/\/[^\/]*$/, '/') + picked;
-    console.log('Pixel8: wallpaper pick [' + (day % lines.length) + '] ' + url);
+    console.log('Pixel8: wallpaper pick [' + idx + '] ' + url);
     fetchWallpaperImage(url);
   };
   xhr.onerror = function() { wpInFlight = false; console.log('Pixel8: wallpaper list fetch failed'); };
   xhr.send();
 }
 
+// Determines which of a pair ('a' or 'b') should be active right now. With
+// only one side present that one always wins; with both, WALLPAPER_DAY_START/
+// WALLPAPER_NIGHT_START (local "HH:MM") pick between them, same idea as a
+// phone's day/night wallpaper. Shared by both the uploaded-image pair and
+// the URL pair.
+function parseHHMM(str, defaultMinutes) {
+  var m = /^(\d{1,2}):(\d{2})$/.exec(str || '');
+  if (!m) return defaultMinutes;
+  var mins = parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+  return (mins >= 0 && mins < 1440) ? mins : defaultMinutes;
+}
+function pickRotationSlot(s, hasA, hasB) {
+  if (!hasB) return 'a';
+  if (!hasA) return 'b';
+  var dayStart   = parseHHMM(s.WALLPAPER_DAY_START,   7 * 60);
+  var nightStart = parseHHMM(s.WALLPAPER_NIGHT_START, 20 * 60);
+  var now = new Date();
+  var cur = now.getHours() * 60 + now.getMinutes();
+  var inDay = (dayStart <= nightStart)
+    ? (cur >= dayStart && cur < nightStart)
+    : (cur >= dayStart || cur < nightStart);
+  return inDay ? 'a' : 'b';
+}
+
 function refreshWallpaper(force) {
   if (wpInFlight) { console.log('Pixel8: wallpaper already in flight, skipping'); return; }
   var s = claySettings();
-  var data = s.WALLPAPER_DATA || '';
-  var url = (s.WALLPAPER_URL || '').trim();
-  if (!data && !url) return;
+  var data1 = s.WALLPAPER_DATA  || '';
+  var data2 = s.WALLPAPER_DATA2 || '';
+  var url1 = (s.WALLPAPER_URL  || '').trim();
+  var url2 = (s.WALLPAPER_URL2 || '').trim();
+  if (!data1 && !data2 && !url1 && !url2) return;
+
+  if (data1 || data2) {
+    // Uploaded image(s): no network cost, so re-check every refreshAll
+    // (~hourly via REQUEST_STATUS) and only resend when the active slot
+    // actually changes (day/night rotation) or a refresh is forced.
+    // Takes precedence over WALLPAPER_URL when both are set.
+    var dataSlot = pickRotationSlot(s, !!data1, !!data2);
+    var slotKey = 'data:' + dataSlot;
+    if (!force && slotKey === lsGet('wpActiveSlot')) return;
+    lsSet('wpActiveSlot', slotKey);
+    lsSet('wpFetchedAt', '' + Date.now());
+    wpInFlight = true;
+    sendWallpaper(base64ToArrayBuffer(dataSlot === 'b' ? data2 : data1));
+    return;
+  }
+
+  // URL / .list: network fetch. A .list rotates once per "day" anchored to
+  // WALLPAPER_DAY_START (so it switches at a predictable time instead of
+  // whenever the throttle happens to allow a re-fetch); a plain static URL
+  // just keeps the old once-per-day refresh in case the hosted file changed.
+  // Either way, a day/night slot change bypasses the wait immediately.
+  var urlSlot = pickRotationSlot(s, !!url1, !!url2);
+  var slotKey = 'url:' + urlSlot;
+  var url = urlSlot === 'b' ? url2 : url1;
+  var isList = /\.list$/i.test(url);
+  var rotateAt = parseHHMM(s.WALLPAPER_DAY_START, 0);
+
+  var slotChanged = slotKey !== lsGet('wpActiveSlot');
+  var dayChanged = isList && ('' + localDayIndex(rotateAt)) !== lsGet('wpListDay');
   var last = parseInt(lsGet('wpFetchedAt') || '0', 10);
-  if (!force && (Date.now() - last) < 86400000) return;   // once per day
+  var staleFetch = !isList && (Date.now() - last) >= 86400000;
+  if (!force && !slotChanged && !dayChanged && !staleFetch) return;
+
+  lsSet('wpActiveSlot', slotKey);
   lsSet('wpFetchedAt', '' + Date.now());
+  if (isList) lsSet('wpListDay', '' + localDayIndex(rotateAt));
   wpInFlight = true;
-  if (data) {
-    // Uploaded image: settings.html already validated PNG/size/dimensions,
-    // takes precedence over WALLPAPER_URL when both are set.
-    sendWallpaper(base64ToArrayBuffer(data));
-  } else if (/\.list$/i.test(url)) {
-    fetchWallpaperList(url);
+  if (isList) {
+    fetchWallpaperList(url, rotateAt);
   } else {
     fetchWallpaperImage(url);
   }
@@ -705,7 +773,7 @@ function refreshAll(force) {
   sendPhoneBattery();
   fetchCalendars(force);
   refreshWeather(force);
-  refreshWallpaper(false);  // wallpaper uses its own once-per-day throttle; settings reset wpFetchedAt=0
+  refreshWallpaper(false);  // wallpaper has its own dedup — daily throttle for URLs, slot-change for uploads
 }
 
 Pebble.addEventListener('ready', function () {
@@ -723,7 +791,7 @@ Pebble.addEventListener('ready', function () {
 // reset the throttle so refreshWallpaper sees wpFetchedAt=0 and re-fetches.
 Pebble.addEventListener('appmessage', function (e) {
   if (e.payload['REQUEST_STATUS']) {
-    if (e.payload['WP_HAVE'] === 0) lsSet('wpFetchedAt', '0');
+    if (e.payload['WP_HAVE'] === 0) { lsSet('wpFetchedAt', '0'); lsSet('wpActiveSlot', ''); }
     refreshAll(false);
   }
 });
@@ -811,7 +879,7 @@ Pebble.addEventListener('webviewclosed', function (e) {
   lsSet('cal2Etag', ''); lsSet('cal2Fetched', '0');
   lsSet('sentEvents', '');
   lsSet('sentWeather', '');
-  lsSet('wpFetchedAt', '0');  // force wallpaper re-fetch on next refreshAll
+  lsSet('wpFetchedAt', '0'); lsSet('wpActiveSlot', '');  // force wallpaper re-fetch/re-send on next refreshAll
   Pebble.sendAppMessage(payload,
     function () {
       console.log('Pixel8 settings: colors sent ok');

@@ -15,7 +15,7 @@ The Calendar panel shows your next 1 to 5 events from any iCal/ICS feed (Google 
 
 Style it your way: each panel's 3D card background can be toggled on or off (including a new card behind the clock), the text size of the Info and Calendar panels is selectable (14/18/24 px), the padding between panel borders and content is adjustable per panel, and the date can show the ISO week number (v.28).
 
-The background can be a custom PNG uploaded directly from the settings page (no hosting needed), a solid colour, or a custom PNG loaded from a URL. A .list file URL rotates through a different image each day.
+The background can be a custom PNG uploaded directly from the settings page (no hosting needed), a solid colour, or a custom PNG loaded from a URL. Add a second image or URL and it rotates with the first at set day/night times. A .list file URL rotates through a different image each day.
 
 https://example.com/file.list with the following content
 https://example.com/image1.png

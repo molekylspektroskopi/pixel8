@@ -1,5 +1,13 @@
 # Changelog
 
+## v3.24.0
+- Wallpaper can now rotate between two images at set times of day — a day
+  wallpaper and a night wallpaper. Works for uploaded images (upload a
+  second one in settings) and for URLs (fill in a second wallpaper URL);
+  uploads still take priority over URLs when both are set. Set "Day starts"
+  and "Night starts" and the watch switches automatically, checked about
+  once an hour. With only one image/URL set, nothing changes
+
 ## v3.23.0
 - Wallpaper can now be uploaded directly from the settings page instead of
   hosting a URL — pick a PNG on your phone and it's sent straight to the

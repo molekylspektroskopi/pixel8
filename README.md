@@ -29,9 +29,10 @@ full-screen pixel-art wallpapers with floating 3D info cards.
   Calendar, Nextcloud, Apple Calendar, …), with multi-day ranges right-aligned and
   customisable "Today"/"Tomorrow" labels (NOW, TMR, Idag, …). Events also become
   Timeline pins with an *Open Agenda* action.
-- **Wallpaper** — a solid colour, a PNG uploaded directly from the settings
-  page, a PNG fetched from any URL, or a `.list` file that rotates through a
-  different image each day.
+- **Wallpaper** — a solid colour, one or two PNGs uploaded directly from the
+  settings page, one or two PNG URLs, or a `.list` file that rotates through
+  a different image each day. A second image or URL rotates in at set
+  day/night times.
 - **Layout** — the three panels can be reordered or hidden; the bottom panel is
   anchored to the screen edge. Per-panel card toggle, padding (0–24 px), and font
   size (14/18/24 px) with smart row fitting — larger fonts work great with CJK
@@ -110,10 +111,14 @@ magick input.png -resize 200x228! -colors 64 -type Palette wallpaper.png
    afterwards — if it's over 32 KB, redo step 2 with fewer colors (e.g. 32).
 
 No hosting needed if you upload the file directly in settings — it's streamed
-to the watch the same way a URL wallpaper is. For a daily rotation you still
-need a URL: host a `file.list` next to the images containing one image URL (or
-relative filename) per line, and point the wallpaper URL setting at the
-`.list` file.
+to the watch the same way a URL wallpaper is. Fill in a second image (or a
+second URL) and a "Day starts"/"Night starts" time picker appears — the
+watch swaps between the two automatically (checked about once an hour, so
+the swap can lag the set time by up to an hour). Uploaded images always take
+priority over URLs when both are set. For rotation through more than two
+images you still need a URL: host a `file.list` next to the images
+containing one image URL (or relative filename) per line, and point the
+wallpaper URL setting at the `.list` file.
 
 ## Architecture notes
 
