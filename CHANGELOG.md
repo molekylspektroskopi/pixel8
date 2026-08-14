@@ -1,5 +1,10 @@
 # Changelog
 
+## v3.25.1
+- No functional changes — store listing update: notes that Pebble Time 2 is
+  the real-hardware-tested platform and the other six are emulator-verified
+  only, and re-uploads the Pebble Time 2 store screenshots
+
 ## v3.25.0
 - Pixel8 now runs on every Pebble: Pebble Time (basalt), Pebble Time Round
   (chalk), Pebble 2 (diorite), the original Pebble/Pebble Steel (aplite), and
