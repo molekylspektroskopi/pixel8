@@ -1,7 +1,7 @@
 {
   "name": "pixel8",
   "author": "nihplod",
-  "version": "3.24.0",
+  "version": "3.25.0",
   "keywords": [
     "pebble-app"
   ],
@@ -13,7 +13,13 @@
     "sdkVersion": "3",
     "enableMultiJS": true,
     "targetPlatforms": [
-      "emery"
+      "emery",
+      "basalt",
+      "flint",
+      "diorite",
+      "aplite",
+      "chalk",
+      "gabbro"
     ],
     "watchapp": {
       "watchface": true

@@ -1,5 +1,19 @@
 # Changelog
 
+## v3.25.0
+- Pixel8 now runs on every Pebble: Pebble Time (basalt), Pebble Time Round
+  (chalk), Pebble 2 (diorite), the original Pebble/Pebble Steel (aplite), and
+  the newer Rebble-made flint and gabbro — alongside Pebble Time 2 (emery).
+  All panels adapt to each screen's size, including round-safe text layout
+  on Pebble Time Round and gabbro so nothing gets clipped by the bezel, and
+  legible white text/gauges on the black & white watches (Pebble 2, original
+  Pebble, flint) instead of colours that would otherwise render invisibly.
+  Wallpaper uploads now validate against your *connected* watch's exact size
+  and colour depth (shown live in settings) rather than one fixed format —
+  older/smaller watches don't have the memory to decode an oversized image
+  even just to crop it down, and black & white watches need a true grayscale
+  export rather than a reduced colour palette
+
 ## v3.24.0
 - Wallpaper can now rotate between two images at set times of day — a day
   wallpaper and a night wallpaper. Works for uploaded images (upload a

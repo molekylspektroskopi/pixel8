@@ -1,4 +1,4 @@
-Pixel8 is a feature-rich watchface for Pebble Time 2. It shows the time and date, phone and watch battery levels, step count with heart rate, sleep duration, weather forecast, and upcoming calendar events — all on a customisable background.
+Pixel8 is a feature-rich watchface for every Pebble: Pebble Time 2, Pebble Time / Time Steel, Pebble Time Round, Pebble 2, the original Pebble / Pebble Steel, and the newer Rebble-made flint and gabbro. It shows the time and date, phone and watch battery levels, step count with heart rate, sleep duration, weather forecast, and upcoming calendar events — all on a customisable background.
 
 Three major panels — Clock, Info, and Calendar — can be freely reordered by dragging in the settings page, or hidden entirely. The bottom panel is always anchored to the screen edge. The clock panel can be hidden for a minimal data-only layout.
 
@@ -23,12 +23,16 @@ https://example.com/image2.png
 
 All panels and rows can be toggled on or off individually. Colours use the Pebble 64-colour palette.
 
-How to convert an image for use as background — it must be exactly 200x228 px, indexed/palette colour, and 32 KB or smaller:
+How to convert an image for use as background — the settings page tells you the exact size for your connected watch and shows the right command. Sizes: Pebble Time 2 200x228, gabbro 260x260, Pebble Time Round 160x160, Pebble Time 144x168 (all colour); Pebble 2 / original Pebble / flint 144x168 (black & white). Always 32 KB or smaller.
 
+Colour watches — indexed/palette PNG:
 magick image.png -resize 200x228! -colors 64 -type Palette new_image.png
 
-On Windows, install ImageMagick first (winget install ImageMagick.ImageMagick), then run the same command above in a new PowerShell or Command Prompt window.
+Black & white watches (Pebble 2, original Pebble, flint) — true grayscale, not a reduced colour palette:
+magick image.png -resize 144x168! -colorspace Gray -type Grayscale -depth 1 -dither FloydSteinberg new_image.png
 
-No command line? Use free GIMP instead (Windows/macOS/Linux): Image > Scale Image, set width 200 and height 228 with the chain-link unlinked, then Image > Mode > Indexed with 64 colours, then File > Export As a PNG.
+On Windows, install ImageMagick first (winget install ImageMagick.ImageMagick), then run the same commands in a new PowerShell or Command Prompt window.
+
+No command line? Use free GIMP instead (Windows/macOS/Linux): Image > Scale Image, set width and height to your watch's size with the chain-link unlinked, then Image > Mode > Indexed with 64 colours (or Grayscale then a black & white Indexed palette for B&W watches), then File > Export As a PNG.
 
 This watchface is vibe coded together with Claude for my own personal liking.

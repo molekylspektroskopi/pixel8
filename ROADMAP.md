@@ -1,10 +1,20 @@
 # Pixel8 Roadmap
 
-Progress map and future ideas for the Pixel8 watchface (Pebble Time 2 / emery).
+Progress map and future ideas for the Pixel8 watchface. Runs on all seven
+Pebble platforms: emery, basalt, chalk, diorite, aplite, flint, gabbro.
 
 ---
 
 ## Done
+
+### Multi-platform (v3.25)
+- [x] basalt (Pebble Time), flint, diorite (Pebble 2), aplite (original Pebble),
+      chalk (Pebble Time Round), gabbro — alongside emery (Pebble Time 2)
+- [x] Round-safe text layout (chalk, gabbro): per-row inset from bezel geometry
+- [x] Black & white rendering fix (aplite, diorite, flint): forced legible
+      white foreground instead of colours that silently render invisible
+- [x] Per-platform wallpaper size + colour-depth validation (grayscale
+      required on B&W watches; smaller-than-native size on chalk to fit RAM)
 
 ### Core display
 - [x] Large time + date, 4 date formats
@@ -101,6 +111,7 @@ Progress map and future ideas for the Pixel8 watchface (Pebble Time 2 / emery).
 
 | Version | Summary |
 |---------|---------|
+| v3.25.0 | Multi-platform support: basalt, chalk, diorite, aplite, flint, gabbro added alongside emery — round-safe layout, B&W rendering fix, per-platform wallpaper sizing |
 | v3.24.0 | Wallpaper rotation between two images (or two URLs) at configurable day/night times, checked roughly once an hour; uploads still take priority over URLs |
 | v3.23.0 | Wallpaper can be uploaded directly from settings (validated 200×228 indexed PNG, ≤32 KB) instead of requiring a hosted URL; sent to the watch via the existing chunked BT transfer |
 | v3.22.0 | Removed battery time-remaining estimate (settings + on-watch rate tracking) — cost more battery than it was worth and stayed unreliable; battery rows are always the pixel-art percentage gauge now |

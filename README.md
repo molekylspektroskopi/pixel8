@@ -4,8 +4,11 @@
 > by someone who can't code. I describe what I want on my watch; Claude writes the
 > code. Read, reuse, and judge the source with that in mind.
 
-A feature-rich watchface for **Pebble Time 2** (emery, 200×228 color), built around
-full-screen pixel-art wallpapers with floating 3D info cards.
+A feature-rich watchface built around full-screen pixel-art wallpapers with
+floating 3D info cards. Runs on every Pebble platform: Pebble Time 2 (emery),
+Pebble Time / Time Steel (basalt), Pebble Time Round (chalk), Pebble 2 (diorite),
+the original Pebble / Pebble Steel (aplite), and the newer Rebble-made flint
+and gabbro.
 
 [**Get it on the Rebble store**](https://apps.rePebble.com/90a5c4131c6444bf9d5def66)
 
@@ -13,6 +16,9 @@ full-screen pixel-art wallpapers with floating 3D info cards.
 ![clock card](screenshots/emery_2_clock_card.png)
 ![18px Japanese calendar](screenshots/emery_3_font18_kanji.png)
 ![cards off](screenshots/emery_4_no_cards.png)
+![Pebble Time](screenshots/basalt_1_default.png)
+![Pebble Time Round](screenshots/chalk_1_default.png)
+![Pebble 2](screenshots/diorite_1_default.png)
 
 ## Features
 
@@ -59,11 +65,12 @@ The face redraws once a minute and avoids everything expensive:
 ## Building
 
 Requires the [Pebble SDK](https://developer.rebble.io/) (tested with pebble-tool
-5.x / SDK 4.17, emery only).
+5.x / SDK 4.33). Builds for all seven platforms — emery, basalt, chalk, diorite,
+aplite, flint, gabbro — declared in `package.json`'s `targetPlatforms`.
 
 ```bash
 pebble build
-pebble install --emulator emery    # or --phone <ip>
+pebble install --emulator emery    # or basalt / chalk / diorite / aplite / flint / gabbro, or --phone <ip>
 ```
 
 `src/pkjs/settings-html.js` is generated from `src/pkjs/settings.html` by
@@ -81,17 +88,37 @@ cp src/pkjs/calendar_config.example.js src/pkjs/calendar_config.js
 ### Wallpaper images
 
 Whether uploaded from the settings page or fetched from a URL, wallpapers must
-be small indexed-colour PNGs, exactly 200×228 px, ≤32 KB. The settings page
-checks all three when you upload and rejects anything that doesn't match, so
-it's worth getting the export right up front rather than guessing.
+be small PNGs, ≤32 KB, sized for the *connected watch* — the settings page
+detects which platform you're paired with and shows the right size and
+`magick` command automatically. There's no universal size: decoding a PNG on
+the watch costs memory proportional to its pixel count, and older/smaller
+platforms don't have room to decode an emery-sized image even to crop it
+down. The color-platform sizes are indexed/palette PNGs; the black & white
+platforms need true grayscale instead (see below), or they fail to render
+even though the file decodes fine.
 
-**macOS / Linux**, with [ImageMagick](https://imagemagick.org/) installed:
+| Platform | Size | Notes |
+|---|---|---|
+| emery (Pebble Time 2) | 200×228 | color |
+| gabbro | 260×260 | color, round |
+| chalk (Pebble Time Round) | 160×160 | color, round — smaller than its 180×180 screen; the native size doesn't fit in RAM to decode |
+| basalt (Pebble Time) | 144×168 | color |
+| flint, diorite (Pebble 2), aplite (original Pebble) | 144×168 | **grayscale**, not indexed |
+
+**macOS / Linux**, with [ImageMagick](https://imagemagick.org/) installed — color platforms:
 
 ```bash
 magick input.png -resize 200x228! -colors 64 -type Palette wallpaper.png
 ```
 
-**Windows**, same command, via [ImageMagick](https://imagemagick.org/script/download.php#windows):
+Black & white platforms (flint / diorite / aplite) need true grayscale, not a
+reduced color palette — an indexed PNG decodes but fails to draw on these:
+
+```bash
+magick input.png -resize 144x168! -colorspace Gray -type Grayscale -depth 1 -dither FloydSteinberg wallpaper.png
+```
+
+**Windows**, same commands, via [ImageMagick](https://imagemagick.org/script/download.php#windows):
 
 ```powershell
 winget install ImageMagick.ImageMagick
@@ -102,11 +129,15 @@ magick input.png -resize 200x228! -colors 64 -type Palette wallpaper.png
 
 **No command line?** Use free [GIMP](https://www.gimp.org/) (Windows/macOS/Linux):
 
-1. Open your image, then **Image → Scale Image…**. Set width to `200` and
-   height to `228`, click the chain-link icon so it's broken (unlinked) so
-   both apply independently, then Scale — this matches what the command
-   above does (stretches to fill exactly, ignoring the original aspect ratio).
-2. **Image → Mode → Indexed…** → *Generate optimum palette*, 64 colors → Convert.
+1. Open your image, then **Image → Scale Image…**. Set width and height to
+   your watch's size from the table above, click the chain-link icon so it's
+   broken (unlinked) so both apply independently, then Scale — this matches
+   what the command above does (stretches to fill exactly, ignoring the
+   original aspect ratio).
+2. Color platforms: **Image → Mode → Indexed…** → *Generate optimum palette*,
+   64 colors → Convert. Black & white platforms (flint/diorite/aplite):
+   **Image → Mode → Grayscale** instead, then **Image → Mode → Indexed…** →
+   *Use black and white (1-bit) palette* → Convert, for a dithered look.
 3. **File → Export As…**, name it `wallpaper.png`, export. Check the file size
    afterwards — if it's over 32 KB, redo step 2 with fewer colors (e.g. 32).
 

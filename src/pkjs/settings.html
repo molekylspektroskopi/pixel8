@@ -259,13 +259,13 @@ input[type=password]{letter-spacing:.1em}
   <div class="sec-body">
     <div class="row"><span class="lbl">Background color</span><button class="cswatch" id="sw-BG_COLOR" onclick="openPicker('BG_COLOR','Background color')"></button></div>
     <div class="row col" id="wp-url-row">
-      <span class="lbl">Wallpaper URL<div class="sub">Direct PNG (200×228 px, max 32 KB) or .list URL with one PNG URL per line for daily rotation</div></span>
+      <span class="lbl">Wallpaper URL<div class="sub" id="wp-url-sub"></div></span>
       <input class="inp" type="text" placeholder="https://example.com/day.png" id="WALLPAPER_URL" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" oninput="updateWallpaperStatus()">
       <span class="lbl" style="margin-top:8px">Second URL<div class="sub">Optional — same rules as above, rotates with the URL above at set times, e.g. a day URL and a night URL.</div></span>
       <input class="inp" type="text" placeholder="https://example.com/night.png" id="WALLPAPER_URL2" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" oninput="updateWallpaperStatus()">
     </div>
     <div class="row col">
-      <span class="lbl">Upload image<div class="sub">Sends a PNG straight to the watch — no hosting needed. Must be exactly 200×228 px, indexed/palette color, max 32 KB:<br><code>magick input.png -resize 200x228! -colors 64 -type Palette wallpaper.png</code><br>Overrides the URL above while set.</div></span>
+      <span class="lbl">Upload image<div class="sub" id="wp-file-sub"></div></span>
       <input class="inp" type="file" accept="image/png" id="WALLPAPER_FILE">
       <div class="sub" id="wp-file-status"></div>
       <span class="txt-btn" id="wp-clear-btn" onclick="clearWallpaperUpload()" style="display:none">Remove uploaded image</span>
@@ -399,6 +399,13 @@ function init(){
   var showWx  = get('SHOW_WEATHER', true)  !== false;
   var showCal = get('SHOW_CALENDAR',true)  !== false;
 
+  document.getElementById('wp-url-sub').textContent =
+    'Direct PNG (' + wpDim[0] + '×' + wpDim[1] + ' px, max 32 KB) or .list URL with one PNG URL per line for daily rotation';
+  document.getElementById('wp-file-sub').innerHTML =
+    'Sends a PNG straight to the watch — no hosting needed. Must be exactly ' + wpDim[0] + '×' + wpDim[1] +
+    (wpIsMono ? ' px, true grayscale (your watch is black & white), max 32 KB' : ' px, indexed/palette color, max 32 KB') +
+    ':<br><code>' + wpMagickCmd() + '</code><br>Overrides the URL above while set.';
+
   document.getElementById('SHOW_CLOCK').checked    = get('SHOW_CLOCK',   true)  !== false;
   document.getElementById('SHOW_SLEEP').checked    = get('SHOW_SLEEP',   false) === true;
   setSelect('STEP_GOAL', get('STEP_GOAL', '0'));
@@ -529,17 +536,58 @@ function save(){
 // Uploaded images must already be exactly the format the watch expects — no
 // resizing/quantizing here, since guessing at that would silently produce a
 // worse result than the documented `magick` command. We just validate.
+//
+// The required size depends on the CONNECTED watch, not a fixed constant:
+// decoding a PNG on-watch costs memory proportional to its pixel count, and
+// the smaller/older platforms don't have room to decode an emery-sized
+// (200x228) image even if only part of it would end up on screen — cropping
+// only helps after decode, and decode is exactly what runs out of memory.
+// index.js passes the connected platform in as _PLATFORM (via
+// Pebble.getActiveWatchInfo()); falls back to emery's size if unknown.
+// chalk is intentionally smaller than its real 180x180 screen: measured on
+// real 64KB-RAM hardware, decoding a 180x180 indexed PNG runs out of memory
+// (the same decode-costs-more-than-final-crop issue as above) while 160x160
+// decodes fine — the wallpaper is centered, so this crops a slim ring off
+// each edge rather than covering the full circle. basalt/flint/diorite (also
+// 64KB) stay at their native 144x168 since that decodes fine there.
+var WP_DIMS = {
+  aplite:  [144, 168], basalt: [144, 168], diorite: [144, 168], flint: [144, 168],
+  chalk:   [160, 160],
+  gabbro:  [260, 260],
+  emery:   [200, 228]
+};
+var wpDim = WP_DIMS[get('_PLATFORM', 'emery')] || WP_DIMS.emery;
+// B&W platforms (aplite/diorite/flint) can only blit true grayscale PNGs —
+// an indexed/palette PNG (even a 2-colour one) decodes fine but fails to
+// draw on-watch ("Only 1 and 2 bit palettized images can be displayed" from
+// the SDK's blit routine), which would otherwise silently show no wallpaper
+// at all. Needs -colorspace Gray -type Grayscale, not -type Palette.
+var WP_MONO_PLATFORMS = { aplite: 1, diorite: 1, flint: 1 };
+var wpIsMono = !!WP_MONO_PLATFORMS[get('_PLATFORM', 'emery')];
+function wpMagickCmd(){
+  if (wpIsMono) {
+    return 'magick input.png -resize ' + wpDim[0] + 'x' + wpDim[1] +
+      '! -colorspace Gray -type Grayscale -depth 1 -dither FloydSteinberg wallpaper.png';
+  }
+  return 'magick input.png -resize ' + wpDim[0] + 'x' + wpDim[1] + '! -colors 64 -type Palette wallpaper.png';
+}
 var wallpaperData = '';
 var wallpaperData2 = '';
 function validateWallpaperPng(bytes){
-  if (bytes.length < 24 || bytes[0]!==0x89 || bytes[1]!==0x50 || bytes[2]!==0x4E || bytes[3]!==0x47)
+  if (bytes.length < 26 || bytes[0]!==0x89 || bytes[1]!==0x50 || bytes[2]!==0x4E || bytes[3]!==0x47)
     return 'Not a valid PNG file.';
   if (bytes.length > 32768)
     return 'File is ' + Math.round(bytes.length/1024) + ' KB — must be 32 KB or smaller. Re-export as an indexed-color PNG with the command below.';
   var w = ((bytes[16]<<24) | (bytes[17]<<16) | (bytes[18]<<8) | bytes[19]) >>> 0;
   var h = ((bytes[20]<<24) | (bytes[21]<<16) | (bytes[22]<<8) | bytes[23]) >>> 0;
-  if (w !== 200 || h !== 228)
-    return 'Image is ' + w + '×' + h + ' px — must be exactly 200×228 px. Re-export with the command below.';
+  if (w !== wpDim[0] || h !== wpDim[1])
+    return 'Image is ' + w + '×' + h + ' px — your watch needs exactly ' + wpDim[0] + '×' + wpDim[1] + ' px. Re-export with the command below.';
+  if (wpIsMono) {
+    var bitDepth  = bytes[24];
+    var colorType = bytes[25];
+    if (colorType !== 0 || (bitDepth !== 1 && bitDepth !== 2))
+      return 'Your watch is black & white and needs a true grayscale PNG (not color/indexed). Re-export with the command below.';
+  }
   return null;
 }
 function arrayBufferToBase64(bytes){

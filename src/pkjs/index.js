@@ -776,8 +776,15 @@ function refreshAll(force) {
   refreshWallpaper(false);  // wallpaper has its own dedup — daily throttle for URLs, slot-change for uploads
 }
 
+var s_watchPlatform = 'emery';  // fallback if getActiveWatchInfo is unavailable
+
 Pebble.addEventListener('ready', function () {
   console.log('Pixel8 companion ready');
+  try {
+    var info = Pebble.getActiveWatchInfo && Pebble.getActiveWatchInfo();
+    if (info && info.platform) s_watchPlatform = info.platform;
+  } catch (e) { console.log('Pixel8: getActiveWatchInfo failed: ' + e); }
+  console.log('Pixel8: watch platform ' + s_watchPlatform);
   // Watch just connected — its RAM state is fresh. Clear dedup keys so
   // cached data is always re-sent on reconnect, even if values unchanged.
   lsSet('sentWeather', '');
@@ -798,7 +805,10 @@ Pebble.addEventListener('appmessage', function (e) {
 
 Pebble.addEventListener('showConfiguration', function () {
   var s = claySettings();
-  var html = settingsHtml.replace('/*__CONFIG__*/', 'var INITIAL_CONFIG = ' + JSON.stringify(s) + ';');
+  var cfg = {};
+  for (var k in s) if (s.hasOwnProperty(k)) cfg[k] = s[k];
+  cfg._PLATFORM = s_watchPlatform;  // not a real setting, never sent back by save()
+  var html = settingsHtml.replace('/*__CONFIG__*/', 'var INITIAL_CONFIG = ' + JSON.stringify(cfg) + ';');
   Pebble.openURL('data:text/html,' + encodeURIComponent(html));
 });
 Pebble.addEventListener('webviewclosed', function (e) {

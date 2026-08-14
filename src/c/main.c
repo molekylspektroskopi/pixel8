@@ -179,9 +179,25 @@ static HealthValue s_sleep      = 0;
 // COLOR HELPERS
 // ============================================================================
 
+// B&W platforms (aplite/diorite/flint) only have Black/White/Clear — an
+// arbitrary GColor (the orange default text color, a computed battery
+// gradient, GColorGreen/LightGray, or any 64-colour user pick) collapses to
+// Black under the SDK's colour-to-1-bit conversion far more often than
+// White, which made whole rows silently vanish against the black background.
+// Force every foreground colour through this so B&W builds always get a
+// visible White instead of whatever the colour would have rounded to.
+static GColor mono_safe(GColor c) {
+#if defined(PBL_BW)
+    (void)c;
+    return GColorWhite;
+#else
+    return c;
+#endif
+}
+
 // Battery level -> color gradient: 0% red, 50% yellow, 100% green.
 static GColor battery_color(int percent) {
-    if (percent < 0) return GColorLightGray;
+    if (percent < 0) return mono_safe(GColorLightGray);
     if (percent > 100) percent = 100;
     int r, g;
     if (percent <= 50) {
@@ -191,7 +207,37 @@ static GColor battery_color(int percent) {
         r = ((100 - percent) * 255) / 50;
         g = 255;
     }
-    return GColorFromRGB(r, g, 0);
+    return mono_safe(GColorFromRGB(r, g, 0));
+}
+
+#if defined(PBL_ROUND)
+// Integer sqrt (Newton's method) — avoids pulling in libm just for this.
+// Only round_inset() below needs it, so only compiled on round platforms.
+static int isqrt(int n) {
+    if (n <= 0) return 0;
+    int x = n, y = (x + 1) / 2;
+    while (y < x) { x = y; y = (x + n / x) / 2; }
+    return x;
+}
+#endif
+
+// Extra horizontal inset needed so a row centered at y_center doesn't get
+// clipped by a round bezel (chalk/gabbro): at that height, the visible half
+// width of the screen circle is sqrt(R^2 - (y-cy)^2), narrower the further
+// from vertical center. 0 on rectangular platforms. Apply symmetrically to
+// both left and right edges.
+static int round_inset(int y_center, int w, int h) {
+#if defined(PBL_ROUND)
+    int cy = h / 2;
+    int R  = w / 2;
+    int dy = y_center - cy;
+    if (dy < 0) dy = -dy;
+    if (dy >= R) return R;
+    return R - isqrt(R * R - dy * dy);
+#else
+    (void)y_center; (void)w; (void)h;
+    return 0;
+#endif
 }
 
 // ============================================================================
@@ -335,10 +381,21 @@ static int px_stride(int px) {
 static void canvas_update_proc(Layer *layer, GContext *ctx) {
     GRect bounds = layer_get_bounds(layer);
     const int W = bounds.size.w;
+    const int H = bounds.size.h;
 
     // --- background ---
     if (s_background) {
-        graphics_draw_bitmap_in_rect(ctx, s_background, bounds);
+        // graphics_draw_bitmap_in_rect never scales: a bitmap larger than
+        // `rect` just clips on the right/bottom edges. Center it instead of
+        // anchoring at (0,0) so screens smaller than the uploaded 200x228
+        // wallpaper (basalt, aplite, ...) crop evenly on all sides rather
+        // than always losing the bottom-right. No-op on emery, where the
+        // wallpaper is already exactly screen-sized.
+        GRect wp_bounds = gbitmap_get_bounds(s_background);
+        GRect wp_dst = GRect(bounds.origin.x + (bounds.size.w - wp_bounds.size.w) / 2,
+                              bounds.origin.y + (bounds.size.h - wp_bounds.size.h) / 2,
+                              wp_bounds.size.w, wp_bounds.size.h);
+        graphics_draw_bitmap_in_rect(ctx, s_background, wp_dst);
     } else {
         graphics_context_set_fill_color(ctx, s_bg_color);
         graphics_fill_rect(ctx, bounds, 0, GCornerNone);
@@ -508,19 +565,24 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
             }
         }
 
-        GColor steps_color = (s_step_goal > 0 && s_steps >= (HealthValue)s_step_goal)
-                             ? GColorGreen : s_text_color;
+        GColor steps_color = mono_safe((s_step_goal > 0 && s_steps >= (HealthValue)s_step_goal)
+                             ? GColorGreen : s_text_color);
 
         for (int ri = 0; ri < 4; ri++) {
             int row = ROW_ORDER[ord][ri];
             if (!vis[row]) continue;
 
+            // Extra left/right margin so this row's content clears a round
+            // bezel (0 on rectangular platforms) — recomputed per row since
+            // rows further from vertical center need more of it.
+            int rin = round_inset(ry + row_h / 2, W, H);
+
             if (row == 0) {
             // ── Battery row ──────────────────────────────────────────────
             GColor p_color   = battery_color(s_phone_battery);
             GColor w_color   = battery_color(s_watch_battery);
-            GColor phone_txt = s_phone_connected ? s_text_color : GColorLightGray;
-            GColor phone_bar = s_phone_connected ? p_color      : GColorLightGray;
+            GColor phone_txt = s_phone_connected ? s_text_color : mono_safe(GColorLightGray);
+            GColor phone_bar = s_phone_connected ? p_color      : mono_safe(GColorLightGray);
 
             static char pbat_str[12];
             if (s_phone_battery < 0) strncpy(pbat_str, "---", sizeof(pbat_str));
@@ -533,7 +595,7 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
             int txt_y  = ry - 4;    // larger fonts' internal top padding ≈ vsh
             int icon_y = ry - 1 + vsh;
             const int BAT_GAP = 4;
-            const int OUT = lx;
+            const int OUT = lx + rin;
             int pw = s_phone_bmp ? gbitmap_get_bounds(s_phone_bmp).size.w : 8;
             int ph = s_phone_bmp ? gbitmap_get_bounds(s_phone_bmp).size.h : 12;
             int ww = s_watch_bmp ? gbitmap_get_bounds(s_watch_bmp).size.w : 12;
@@ -591,7 +653,7 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
                         GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft);
                 int total_w = w1.w + w2.w + (s_heart_rate > 0 ? hw + 1 + w3.w : 0);
                 int sx = (W - total_w) / 2;
-                if (sx < lx) sx = lx;
+                if (sx < lx + rin) sx = lx + rin;
                 int iy = ry + 5 + vsh;
                 draw_shadowed(ctx, steps_str, info_font,
                     GRect(sx, ry, w1.w + 2, row_h),
@@ -622,16 +684,18 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
                 const int col_w  = ICON_W + TEMP_W;
                 const int col_gap = 5;
 
+                int card_x_row = CARD_X + rin;
+
                 // Drop trailing forecast columns that no longer fit (large fonts)
                 while (total_cols > 1 &&
-                       total_cols * col_w + (total_cols - 1) * col_gap > W - CARD_X * 2 - 4) {
+                       total_cols * col_w + (total_cols - 1) * col_gap > W - card_x_row * 2 - 4) {
                     total_cols--;
                 }
 
                 int group_w = col_w + (total_cols > 1 ? (total_cols - 1) * (col_w + col_gap) : 0);
-                int avail = W - CARD_X * 2;
-                int wcx_start = CARD_X + (avail - group_w) / 2;
-                if (wcx_start < CARD_X + 2) wcx_start = CARD_X + 2;
+                int avail = W - card_x_row * 2;
+                int wcx_start = card_x_row + (avail - group_w) / 2;
+                if (wcx_start < card_x_row + 2) wcx_start = card_x_row + 2;
 
                 int wcx[4];
                 wcx[0] = wcx_start;
@@ -667,7 +731,7 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
                 }
             } else {
                 draw_shadowed(ctx, s_weather_line, info_font,
-                    GRect(lx, ry, W - lx * 2, row_h),
+                    GRect(lx + rin, ry, W - (lx + rin) * 2, row_h),
                     GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, s_text_color);
             }
             } else {
@@ -678,7 +742,7 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
                 static char sleep_str[20];
                 snprintf(sleep_str, sizeof(sleep_str), "%dh %dm slp", sleep_h, sleep_m);
                 draw_shadowed(ctx, sleep_str, info_font,
-                    GRect(lx, ry, W - lx * 2, row_h),
+                    GRect(lx + rin, ry, W - (lx + rin) * 2, row_h),
                     GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, s_text_color);
             }
             } // end row switch
@@ -701,6 +765,10 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
             int ry = y_cal + s_cal_pad_y + row * cal_row_h;
             row++;
 
+            int rrin = round_inset(ry + cal_row_h / 2, W, H);
+            int rclx = clx + rrin;
+            int rcw  = cw - rrin * 2;
+
             char left[64];
             safe_copy(left, s_event_text[i]);
             char *right = strchr(left, '\t');
@@ -708,11 +776,11 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
 
             // Shadowed like the info rows — stays readable when the card is off
             draw_shadowed(ctx, left, evt_font,
-                GRect(clx, ry, (right ? cw * 62 / 100 : cw), cal_row_h),
+                GRect(rclx, ry, (right ? rcw * 62 / 100 : rcw), cal_row_h),
                 GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, s_text_color);
             if (right) {
                 draw_shadowed(ctx, right, evt_font,
-                    GRect(clx, ry, cw, cal_row_h),
+                    GRect(rclx, ry, rcw, cal_row_h),
                     GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, s_text_color);
             }
         }
@@ -820,10 +888,10 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
                 APP_LOG(APP_LOG_LEVEL_INFO, "rx BOX_COLOR=0x%06x argb=0x%02x",
                         (unsigned)boxc->value->int32, (unsigned)s_box_color.argb); }
     Tuple *txtc = dict_find(iterator, MESSAGE_KEY_TEXT_COLOR);
-    if (txtc) { s_text_color = GColorFromHEX(txtc->value->int32);
+    if (txtc) { s_text_color = mono_safe(GColorFromHEX(txtc->value->int32));
                 persist_write_int(PERSIST_TEXT_COLOR, (int)s_text_color.argb); }
     Tuple *clkc = dict_find(iterator, MESSAGE_KEY_CLOCK_COLOR);
-    if (clkc) { s_clock_color = GColorFromHEX(clkc->value->int32);
+    if (clkc) { s_clock_color = mono_safe(GColorFromHEX(clkc->value->int32));
                 persist_write_int(PERSIST_CLOCK_COLOR, (int)s_clock_color.argb); }
 
     Tuple *wl = dict_find(iterator, MESSAGE_KEY_WEATHER_LINE);
@@ -1069,10 +1137,10 @@ static void load_persist(void) {
 
     s_box_color   = persist_exists(PERSIST_BOX_COLOR)
         ? (GColor){ .argb = (uint8_t)persist_read_int(PERSIST_BOX_COLOR) }   : (GColor)DEFAULT_BOX_COLOR;
-    s_text_color  = persist_exists(PERSIST_TEXT_COLOR)
-        ? (GColor){ .argb = (uint8_t)persist_read_int(PERSIST_TEXT_COLOR) }  : (GColor)DEFAULT_TEXT_COLOR;
-    s_clock_color = persist_exists(PERSIST_CLOCK_COLOR)
-        ? (GColor){ .argb = (uint8_t)persist_read_int(PERSIST_CLOCK_COLOR) } : (GColor)DEFAULT_CLOCK_COLOR;
+    s_text_color  = mono_safe(persist_exists(PERSIST_TEXT_COLOR)
+        ? (GColor){ .argb = (uint8_t)persist_read_int(PERSIST_TEXT_COLOR) }  : (GColor)DEFAULT_TEXT_COLOR);
+    s_clock_color = mono_safe(persist_exists(PERSIST_CLOCK_COLOR)
+        ? (GColor){ .argb = (uint8_t)persist_read_int(PERSIST_CLOCK_COLOR) } : (GColor)DEFAULT_CLOCK_COLOR);
 
     s_calendar_rows = persist_exists(PERSIST_CALENDAR_ROWS) ? persist_read_int(PERSIST_CALENDAR_ROWS) : 3;
     if (s_calendar_rows < 1 || s_calendar_rows > 5) s_calendar_rows = 3;
