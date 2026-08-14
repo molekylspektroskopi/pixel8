@@ -1,5 +1,19 @@
 # Changelog
 
+## v3.25.2
+- Three edge-case fixes from a full-codebase review of the v3.25.0
+  multi-platform work, all on black & white or round watches:
+  - Custom background/panel-box colours are now also forced to black on
+    black & white watches (aplite/diorite/flint), matching the existing fix
+    for text — a light colour picked for either one could otherwise make
+    the (also forced-white) text invisible against it
+  - The steps row on round watches (chalk/gabbro) is now inset from the
+    right edge too, not just the left, so a long combination of step count,
+    distance, and heart rate can't run under the bezel
+  - Panel card backgrounds on round watches now inset enough for their
+    narrowest row instead of a fixed margin, so square card corners near
+    the top/bottom of the screen no longer poke past the round bezel
+
 ## v3.25.1
 - No functional changes — store listing update: notes that Pebble Time 2 is
   the real-hardware-tested platform and the other six are emulator-verified

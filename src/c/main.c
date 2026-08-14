@@ -195,6 +195,22 @@ static GColor mono_safe(GColor c) {
 #endif
 }
 
+// Companion to mono_safe() for surfaces (background, card fill) rather than
+// foreground content: forces Black so it's guaranteed to contrast with
+// mono_safe()'s forced White, regardless of what the color picker (which
+// isn't platform-aware) was actually set to. Without this, a light BG_COLOR
+// or BOX_COLOR pick that itself rounds to White on a B&W build would make
+// the forced-White text invisible against it — the same class of bug
+// mono_safe() exists to prevent, just on the other side of the contrast.
+static GColor mono_safe_bg(GColor c) {
+#if defined(PBL_BW)
+    (void)c;
+    return GColorBlack;
+#else
+    return c;
+#endif
+}
+
 // Battery level -> color gradient: 0% red, 50% yellow, 100% green.
 static GColor battery_color(int percent) {
     if (percent < 0) return mono_safe(GColorLightGray);
@@ -238,6 +254,18 @@ static int round_inset(int y_center, int w, int h) {
     (void)y_center; (void)w; (void)h;
     return 0;
 #endif
+}
+
+// Same idea as round_inset() but for a card background spanning a Y range
+// (e.g. the info/calendar panel behind several rows) rather than a single
+// row: the inset grows monotonically with distance from vertical center, so
+// the card needs whichever of its top/bottom edge is farther from center —
+// using just one endpoint (or a single mid-panel row) would under-inset the
+// other edge and let a squared-off card corner clip the bezel.
+static int round_inset_range(int y0, int y1, int w, int h) {
+    int a = round_inset(y0, w, h);
+    int b = round_inset(y1, w, h);
+    return (a > b) ? a : b;
 }
 
 // ============================================================================
@@ -542,7 +570,10 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
         };
 
         if (n_vis > 0 && y_info >= 0) {
-        if (s_info_bg) draw_card(ctx, CARD_X, y_info, W - CARD_X * 2, h_info, CARD_R);
+        if (s_info_bg) {
+            int card_rin = round_inset_range(y_info, y_info + h_info, W, H);
+            draw_card(ctx, CARD_X + card_rin, y_info, W - (CARD_X + card_rin) * 2, h_info, CARD_R);
+        }
 
         GFont info_font = px_font(s_info_font_px);
         int   row_h = info_stride - 1;              // visible row height
@@ -654,6 +685,7 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
                 int total_w = w1.w + w2.w + (s_heart_rate > 0 ? hw + 1 + w3.w : 0);
                 int sx = (W - total_w) / 2;
                 if (sx < lx + rin) sx = lx + rin;
+                if (sx + total_w > W - lx - rin) sx = W - lx - rin - total_w;
                 int iy = ry + 5 + vsh;
                 draw_shadowed(ctx, steps_str, info_font,
                     GRect(sx, ry, w1.w + 2, row_h),
@@ -754,7 +786,10 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
 
     // --- agenda card (next calendar events) ---
     if (s_show_calendar && y_cal >= 0) {
-        if (s_cal_bg) draw_card(ctx, CARD_X, y_cal, W - CARD_X * 2, h_cal, CARD_R);
+        if (s_cal_bg) {
+            int card_rin = round_inset_range(y_cal, y_cal + h_cal, W, H);
+            draw_card(ctx, CARD_X + card_rin, y_cal, W - (CARD_X + card_rin) * 2, h_cal, CARD_R);
+        }
 
         GFont evt_font = px_font(s_cal_font_px);
         int clx = CARD_X + s_cal_pad_x;             // content left edge (default 16)
@@ -883,7 +918,7 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
 
     // Colors from the settings page (persisted as GColor.argb)
     Tuple *boxc = dict_find(iterator, MESSAGE_KEY_BOX_COLOR);
-    if (boxc) { s_box_color = GColorFromHEX(boxc->value->int32);
+    if (boxc) { s_box_color = mono_safe_bg(GColorFromHEX(boxc->value->int32));
                 persist_write_int(PERSIST_BOX_COLOR, (int)s_box_color.argb);
                 APP_LOG(APP_LOG_LEVEL_INFO, "rx BOX_COLOR=0x%06x argb=0x%02x",
                         (unsigned)boxc->value->int32, (unsigned)s_box_color.argb); }
@@ -1038,7 +1073,7 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
 
     Tuple *bgc = dict_find(iterator, MESSAGE_KEY_BG_COLOR);
     if (bgc) {
-        s_bg_color = GColorFromHEX(bgc->value->int32);
+        s_bg_color = mono_safe_bg(GColorFromHEX(bgc->value->int32));
         persist_write_int(PERSIST_BG_COLOR, (int)s_bg_color.argb);
     }
 
@@ -1135,8 +1170,8 @@ static void load_persist(void) {
     if (s_weather_icon_1 < 0 || s_weather_icon_1 >= 9) s_weather_icon_1 = -1;
     if (s_weather_icon_2 < 0 || s_weather_icon_2 >= 9) s_weather_icon_2 = -1;
 
-    s_box_color   = persist_exists(PERSIST_BOX_COLOR)
-        ? (GColor){ .argb = (uint8_t)persist_read_int(PERSIST_BOX_COLOR) }   : (GColor)DEFAULT_BOX_COLOR;
+    s_box_color   = mono_safe_bg(persist_exists(PERSIST_BOX_COLOR)
+        ? (GColor){ .argb = (uint8_t)persist_read_int(PERSIST_BOX_COLOR) }   : (GColor)DEFAULT_BOX_COLOR);
     s_text_color  = mono_safe(persist_exists(PERSIST_TEXT_COLOR)
         ? (GColor){ .argb = (uint8_t)persist_read_int(PERSIST_TEXT_COLOR) }  : (GColor)DEFAULT_TEXT_COLOR);
     s_clock_color = mono_safe(persist_exists(PERSIST_CLOCK_COLOR)
@@ -1186,8 +1221,8 @@ static void load_persist(void) {
     s_cal_font_px = persist_exists(PERSIST_CAL_FONT_PX) ? persist_read_int(PERSIST_CAL_FONT_PX) : 14;
     if (s_cal_font_px != 18 && s_cal_font_px != 24) s_cal_font_px = 14;
 
-    s_bg_color = persist_exists(PERSIST_BG_COLOR)
-        ? (GColor){ .argb = (uint8_t)persist_read_int(PERSIST_BG_COLOR) } : GColorBlack;
+    s_bg_color = mono_safe_bg(persist_exists(PERSIST_BG_COLOR)
+        ? (GColor){ .argb = (uint8_t)persist_read_int(PERSIST_BG_COLOR) } : GColorBlack);
 
     for (int i = 0; i < 5; i++) {
         if (persist_exists(PERSIST_EVENTS[i])) {

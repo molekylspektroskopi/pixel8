@@ -111,6 +111,7 @@ Pebble platforms: emery, basalt, chalk, diorite, aplite, flint, gabbro.
 
 | Version | Summary |
 |---------|---------|
+| v3.25.2 | Full-codebase review follow-up: B&W background/box colors also forced black, round-safe steps-row right edge, round-safe card corners |
 | v3.25.1 | No code changes — store listing note (Time 2 is hardware-tested, others emulator-only) + re-uploaded Time 2 screenshots |
 | v3.25.0 | Multi-platform support: basalt, chalk, diorite, aplite, flint, gabbro added alongside emery — round-safe layout, B&W rendering fix, per-platform wallpaper sizing |
 | v3.24.0 | Wallpaper rotation between two images (or two URLs) at configurable day/night times, checked roughly once an hour; uploads still take priority over URLs |
