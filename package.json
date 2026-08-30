@@ -1,97 +1,150 @@
 {
-  "name": "pixel8",
-  "author": "nihplod",
-  "version": "3.25.2",
-  "keywords": [
-    "pebble-app"
-  ],
-  "private": true,
-  "dependencies": {},
-  "pebble": {
-    "displayName": "Pixel8",
-    "uuid": "ee04a4d4-6400-4b06-bbec-8ac51d9bed1d",
-    "sdkVersion": "3",
-    "enableMultiJS": true,
-    "targetPlatforms": [
-      "emery",
-      "basalt",
-      "flint",
-      "diorite",
-      "aplite",
-      "chalk",
-      "gabbro"
+    "author": "nihplod",
+    "dependencies": {},
+    "keywords": [
+        "pebble-app"
     ],
-    "watchapp": {
-      "watchface": true
+    "name": "pixel8",
+    "pebble": {
+        "capabilities": [
+            "location",
+            "configurable",
+            "health"
+        ],
+        "displayName": "Pixel8",
+        "enableMultiJS": true,
+        "messageKeys": [
+            "PHONE_BATTERY",
+            "REQUEST_STATUS",
+            "EVENT_0",
+            "EVENT_1",
+            "EVENT_2",
+            "BOX_COLOR",
+            "TEXT_COLOR",
+            "CLOCK_COLOR",
+            "WEATHER_LINE",
+            "SHOW_BATTERY",
+            "SHOW_STEPS",
+            "SHOW_WEATHER",
+            "SHOW_CALENDAR",
+            "EVENT_3",
+            "EVENT_4",
+            "CALENDAR_ROWS",
+            "DATE_FORMAT",
+            "WEATHER_ICON",
+            "WEATHER_ICON_F",
+            "WEATHER_ICON_1",
+            "WEATHER_ICON_2",
+            "WEATHER_COLS",
+            "WP_TOTAL",
+            "WP_DATA",
+            "WP_DONE",
+            "WP_HAVE",
+            "PANEL_ORDER",
+            "BG_COLOR",
+            "EVENT_0_START",
+            "LAYOUT_ORDER",
+            "SHOW_CLOCK",
+            "SHOW_SLEEP",
+            "STEP_GOAL",
+            "SHOW_WEEK",
+            "CLOCK_BG",
+            "INFO_BG",
+            "CAL_BG",
+            "CLOCK_PAD_X",
+            "CLOCK_PAD_Y",
+            "INFO_PAD_X",
+            "INFO_PAD_Y",
+            "CAL_PAD_X",
+            "CAL_PAD_Y",
+            "INFO_FONT_PX",
+            "CAL_FONT_PX",
+            "UNITS"
+        ],
+        "projectType": "native",
+        "resources": {
+            "media": [
+                {
+                    "file": "images/watch_icon.png",
+                    "name": "WATCH_ICON",
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/phone_icon.png",
+                    "name": "PHONE_ICON",
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/wx_sunny.png",
+                    "name": "WX_SUNNY",
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/wx_partly.png",
+                    "name": "WX_PARTLY",
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/wx_cloudy.png",
+                    "name": "WX_CLOUDY",
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/wx_rain_l.png",
+                    "name": "WX_RAIN_L",
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/wx_rain_h.png",
+                    "name": "WX_RAIN_H",
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/wx_snow_l.png",
+                    "name": "WX_SNOW_L",
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/wx_snow_h.png",
+                    "name": "WX_SNOW_H",
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/wx_mix.png",
+                    "name": "WX_MIX",
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/wx_other.png",
+                    "name": "WX_OTHER",
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/charge_icon.png",
+                    "name": "CHARGE_ICON",
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/heart_icon.png",
+                    "name": "HEART_ICON",
+                    "type": "bitmap"
+                }
+            ]
+        },
+        "sdkVersion": "3",
+        "targetPlatforms": [
+            "aplite",
+            "basalt",
+            "chalk",
+            "diorite",
+            "emery",
+            "gabbro",
+            "flint"
+        ],
+        "uuid": "ee04a4d4-6400-4b06-bbec-8ac51d9bed1d",
+        "watchapp": {
+            "watchface": true
+        }
     },
-    "capabilities": [
-      "health",
-      "location",
-      "configurable"
-    ],
-    "messageKeys": [
-      "PHONE_BATTERY",
-      "REQUEST_STATUS",
-      "EVENT_0",
-      "EVENT_1",
-      "EVENT_2",
-      "BOX_COLOR",
-      "TEXT_COLOR",
-      "CLOCK_COLOR",
-      "WEATHER_LINE",
-      "SHOW_BATTERY",
-      "SHOW_STEPS",
-      "SHOW_WEATHER",
-      "SHOW_CALENDAR",
-      "EVENT_3",
-      "EVENT_4",
-      "CALENDAR_ROWS",
-      "DATE_FORMAT",
-      "WEATHER_ICON",
-      "WEATHER_ICON_F",
-      "WEATHER_ICON_1",
-      "WEATHER_ICON_2",
-      "WEATHER_COLS",
-      "WP_TOTAL",
-      "WP_DATA",
-      "WP_DONE",
-      "WP_HAVE",
-      "PANEL_ORDER",
-      "BG_COLOR",
-      "EVENT_0_START",
-      "LAYOUT_ORDER",
-      "SHOW_CLOCK",
-      "SHOW_SLEEP",
-      "STEP_GOAL",
-      "SHOW_WEEK",
-      "CLOCK_BG",
-      "INFO_BG",
-      "CAL_BG",
-      "CLOCK_PAD_X",
-      "CLOCK_PAD_Y",
-      "INFO_PAD_X",
-      "INFO_PAD_Y",
-      "CAL_PAD_X",
-      "CAL_PAD_Y",
-      "INFO_FONT_PX",
-      "CAL_FONT_PX"
-    ],
-    "resources": {
-      "media": [
-        { "type": "bitmap", "name": "WATCH_ICON",  "file": "images/watch_icon.png"  },
-        { "type": "bitmap", "name": "PHONE_ICON",  "file": "images/phone_icon.png"  },
-        { "type": "bitmap", "name": "WX_SUNNY",    "file": "images/wx_sunny.png"    },
-        { "type": "bitmap", "name": "WX_PARTLY",   "file": "images/wx_partly.png"   },
-        { "type": "bitmap", "name": "WX_CLOUDY",   "file": "images/wx_cloudy.png"   },
-        { "type": "bitmap", "name": "WX_RAIN_L",   "file": "images/wx_rain_l.png"   },
-        { "type": "bitmap", "name": "WX_RAIN_H",   "file": "images/wx_rain_h.png"   },
-        { "type": "bitmap", "name": "WX_SNOW_L",   "file": "images/wx_snow_l.png"   },
-        { "type": "bitmap", "name": "WX_SNOW_H",   "file": "images/wx_snow_h.png"   },
-        { "type": "bitmap", "name": "WX_MIX",      "file": "images/wx_mix.png"      },
-        { "type": "bitmap", "name": "WX_OTHER",    "file": "images/wx_other.png"    },
-        { "type": "bitmap", "name": "CHARGE_ICON", "file": "images/charge_icon.png" },
-        { "type": "bitmap", "name": "HEART_ICON",  "file": "images/heart_icon.png"  }
-      ]
-    }
-  }
+    "version": "3.25.2"
 }

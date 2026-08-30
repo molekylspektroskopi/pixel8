@@ -132,6 +132,12 @@ input[type=password]{letter-spacing:.1em}
     </div>
     <div class="row"><span class="lbl">Battery row</span><div class="tog-wrap"><label class="tog"><input type="checkbox" id="SHOW_BATTERY"><span class="track"></span></label></div></div>
     <div class="row"><span class="lbl">Steps &amp; distance row</span><div class="tog-wrap"><label class="tog"><input type="checkbox" id="SHOW_STEPS"><span class="track"></span></label></div></div>
+    <div class="row"><span class="lbl">Measurement units<div class="sub">Distance &amp; temperature</div></span>
+      <select id="UNITS">
+        <option value="0">Metric (km, °C)</option>
+        <option value="1">Imperial (mi, °F)</option>
+      </select>
+    </div>
     <div class="row"><span class="lbl">Step goal<div class="sub">Row turns green when reached</div></span>
       <select id="STEP_GOAL">
         <option value="0">Off</option>
@@ -429,6 +435,7 @@ function init(){
   document.getElementById('CAL_BG').checked    = get('CAL_BG',    true)  !== false;
   setSelect('INFO_FONT_PX', get('INFO_FONT_PX','14'));
   setSelect('CAL_FONT_PX',  get('CAL_FONT_PX','14'));
+  setSelect('UNITS', get('UNITS','0'));
 
   var PAD_DEFAULTS = { CLOCK_PAD_X:4, CLOCK_PAD_Y:2, INFO_PAD_X:8, INFO_PAD_Y:6, CAL_PAD_X:8, CAL_PAD_Y:1 };
   Object.keys(PAD_DEFAULTS).forEach(function(k){
@@ -495,6 +502,7 @@ function save(){
     DATE_FORMAT:        document.getElementById('DATE_FORMAT').value,
     WEATHER_COLS:       document.getElementById('WEATHER_COLS').value,
     WEATHER_HOURS:      document.getElementById('WEATHER_HOURS').value,
+    UNITS:              document.getElementById('UNITS').value,
     WEATHER_FIXED:      document.getElementById('WEATHER_FIXED').checked,
     WEATHER_LAT:        document.getElementById('WEATHER_LAT').value,
     WEATHER_LON:        document.getElementById('WEATHER_LON').value,

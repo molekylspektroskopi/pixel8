@@ -69,6 +69,7 @@
 #define PERSIST_CAL_PAD_Y        45
 #define PERSIST_INFO_FONT_PX     46
 #define PERSIST_CAL_FONT_PX      47
+#define PERSIST_UNITS            48
 
 #define safe_copy(dst, src) do { strncpy((dst), (src), sizeof(dst) - 1); (dst)[sizeof(dst) - 1] = '\0'; } while(0)
 
@@ -133,6 +134,7 @@ static int  s_cal_pad_x   = 8,  s_cal_pad_y   = 1;
 // Font size (px) for info + calendar panel text: 14 / 18 / 24
 static int  s_info_font_px = 14;
 static int  s_cal_font_px  = 14;
+static bool s_use_imperial  = false;
 
 // Background color used when no wallpaper image is loaded
 static GColor s_bg_color;
@@ -379,6 +381,13 @@ static void parse_weather_line(void) {
         if (!wp) break;
         wp++;
     }
+    // Convert Celsius → Fahrenheit for all temperature fields (skip index 2 = hours)
+    if (s_use_imperial) {
+        for (int wi = 0; wi < 5; wi++) {
+            if (wi == 2) continue;
+            wx_vals[wi] = wx_vals[wi] * 9 / 5 + 32;
+        }
+    }
     snprintf(s_wx_ct, sizeof(s_wx_ct), "%d\xc2\xb0", wx_vals[0]);
     snprintf(s_wx_ft, sizeof(s_wx_ft), "%d\xc2\xb0", wx_vals[1]);
     snprintf(s_wx_d1, sizeof(s_wx_d1), "%d\xc2\xb0", wx_vals[3]);
@@ -584,14 +593,27 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
 
         static char steps_str[16], dist_str[24], hr_str[8];
         {
-            int km   = (int)(s_distance / 1000);
-            int km10 = (int)((s_distance % 1000) / 100);
             snprintf(steps_str, sizeof(steps_str), "%lu stp", (unsigned long)s_steps);
-            if (s_heart_rate > 0) {
-                snprintf(dist_str, sizeof(dist_str), " | %d.%dkm | ", km, km10);
-                snprintf(hr_str,   sizeof(hr_str),   "%d", (int)s_heart_rate);
+            if (s_use_imperial) {
+                int miles  = (int)(s_distance / 1609);
+                int miles10 = (int)((s_distance % 1609) * 10 / 1609);
+                if (s_heart_rate > 0) {
+                    snprintf(dist_str, sizeof(dist_str), " | %d.%dmi | ", miles, miles10);
+                } else {
+                    snprintf(dist_str, sizeof(dist_str), " | %d.%dmi", miles, miles10);
+                }
             } else {
-                snprintf(dist_str, sizeof(dist_str), " | %d.%dkm", km, km10);
+                int km   = (int)(s_distance / 1000);
+                int km10 = (int)((s_distance % 1000) / 100);
+                if (s_heart_rate > 0) {
+                    snprintf(dist_str, sizeof(dist_str), " | %d.%dkm | ", km, km10);
+                } else {
+                    snprintf(dist_str, sizeof(dist_str), " | %d.%dkm", km, km10);
+                }
+            }
+            if (s_heart_rate > 0) {
+                snprintf(hr_str, sizeof(hr_str), "%d", (int)s_heart_rate);
+            } else {
                 hr_str[0] = '\0';
             }
         }
@@ -1064,11 +1086,19 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
         s_info_font_px = (px == 18 || px == 24) ? px : 14;
         persist_write_int(PERSIST_INFO_FONT_PX, s_info_font_px);
     }
+
     Tuple *cfp = dict_find(iterator, MESSAGE_KEY_CAL_FONT_PX);
     if (cfp) {
         int px = (int)cfp->value->int32;
         s_cal_font_px = (px == 18 || px == 24) ? px : 14;
         persist_write_int(PERSIST_CAL_FONT_PX, s_cal_font_px);
+    }
+
+    Tuple *un = dict_find(iterator, MESSAGE_KEY_UNITS);
+    if (un) {
+        s_use_imperial = (un->value->int32 != 0);
+        persist_write_int(PERSIST_UNITS, s_use_imperial ? 1 : 0);
+        parse_weather_line();  // re-parse weather with new units
     }
 
     Tuple *bgc = dict_find(iterator, MESSAGE_KEY_BG_COLOR);
@@ -1220,6 +1250,8 @@ static void load_persist(void) {
     if (s_info_font_px != 18 && s_info_font_px != 24) s_info_font_px = 14;
     s_cal_font_px = persist_exists(PERSIST_CAL_FONT_PX) ? persist_read_int(PERSIST_CAL_FONT_PX) : 14;
     if (s_cal_font_px != 18 && s_cal_font_px != 24) s_cal_font_px = 14;
+
+    s_use_imperial = persist_exists(PERSIST_UNITS) ? (persist_read_int(PERSIST_UNITS) != 0) : false;
 
     s_bg_color = mono_safe_bg(persist_exists(PERSIST_BG_COLOR)
         ? (GColor){ .argb = (uint8_t)persist_read_int(PERSIST_BG_COLOR) } : GColorBlack);

@@ -839,7 +839,7 @@ Pebble.addEventListener('webviewclosed', function (e) {
   var wxCols = parseInt(s.WEATHER_COLS || '3', 10);
   payload['WEATHER_COLS'] = (wxCols >= 0 && wxCols <= 3) ? wxCols : 3;
 
-
+  payload['UNITS'] = (s.UNITS === '1') ? 1 : 0;
 
   var panelOrder = parseInt(s.PANEL_ORDER || '0', 10);
   payload['PANEL_ORDER'] = (panelOrder >= 0 && panelOrder <= 5) ? panelOrder : 0;
