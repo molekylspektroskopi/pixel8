@@ -111,6 +111,7 @@ Pebble platforms: emery, basalt, chalk, diorite, aplite, flint, gabbro.
 
 | Version | Summary |
 |---------|---------|
+| v3.26.0 | Imperial units option (miles, °F) for the steps-row distance and weather temperatures, converted on-watch from cached metric data — contributed by @Artimidorus |
 | v3.25.2 | Full-codebase review follow-up: B&W background/box colors also forced black, round-safe steps-row right edge, round-safe card corners |
 | v3.25.1 | No code changes — store listing note (Time 2 is hardware-tested, others emulator-only) + re-uploaded Time 2 screenshots |
 | v3.25.0 | Multi-platform support: basalt, chalk, diorite, aplite, flint, gabbro added alongside emery — round-safe layout, B&W rendering fix, per-platform wallpaper sizing |

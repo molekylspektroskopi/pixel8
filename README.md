@@ -32,7 +32,8 @@ Pebble SDK emulator only (no other physical devices on hand); see
 - **Info panel** — four sortable, individually toggleable rows:
   - *Battery*: phone + watch, each shown as a chunky pixel-art gauge with a
     color gradient fill, plus a charging bolt icon
-  - *Steps*: today's steps, distance, heart rate; row turns green at your step goal
+  - *Steps*: today's steps, distance, heart rate; row turns green at your step goal.
+    Distance and weather temperatures switch between metric and imperial in settings
   - *Weather*: current + up to 3 forecast columns (N hours ahead, tomorrow, day+2)
     with pixel icons — powered by [Open-Meteo](https://open-meteo.com/), no API key
   - *Sleep*: last night's sleep as hours and minutes

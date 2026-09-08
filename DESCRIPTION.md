@@ -7,7 +7,7 @@ Three major panels — Clock, Info, and Calendar — can be freely reordered by 
 The Info panel has four sortable, individually toggleable rows:
 
 Battery — phone and watch bars with colour-coded gradients and a lightning bolt icon when your phone is charging.
-Steps — today's steps, distance walked, and heart rate with a pixel heart icon when a reading is available. Set a step goal in settings; the row turns green when you reach it.
+Steps — today's steps, distance walked, and heart rate with a pixel heart icon when a reading is available. Set a step goal in settings; the row turns green when you reach it. Switch distance and weather temperatures to Imperial (miles, °F) in settings if you prefer that over the metric default.
 Weather — up to 4 forecast columns (current, a few hours ahead, tomorrow, day+2) with weather icons. Provided by Open-Meteo, no API key needed.
 Sleep — last night's sleep shown as hours and minutes.
 

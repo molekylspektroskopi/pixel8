@@ -69,6 +69,7 @@
 #define PERSIST_CAL_PAD_Y        45
 #define PERSIST_INFO_FONT_PX     46
 #define PERSIST_CAL_FONT_PX      47
+#define PERSIST_UNITS            48
 
 #define safe_copy(dst, src) do { strncpy((dst), (src), sizeof(dst) - 1); (dst)[sizeof(dst) - 1] = '\0'; } while(0)
 
@@ -133,6 +134,7 @@ static int  s_cal_pad_x   = 8,  s_cal_pad_y   = 1;
 // Font size (px) for info + calendar panel text: 14 / 18 / 24
 static int  s_info_font_px = 14;
 static int  s_cal_font_px  = 14;
+static bool s_use_imperial = false;
 
 // Background color used when no wallpaper image is loaded
 static GColor s_bg_color;
@@ -379,6 +381,15 @@ static void parse_weather_line(void) {
         if (!wp) break;
         wp++;
     }
+    // Weather is always fetched/cached in Celsius (index 2 is forecast-hours-
+    // ahead, not a temperature — skip it); convert to Fahrenheit for display
+    // only, so no re-fetch is needed when the unit setting changes.
+    if (s_use_imperial) {
+        for (int wi = 0; wi < 5; wi++) {
+            if (wi == 2) continue;
+            wx_vals[wi] = wx_vals[wi] * 9 / 5 + 32;
+        }
+    }
     snprintf(s_wx_ct, sizeof(s_wx_ct), "%d\xc2\xb0", wx_vals[0]);
     snprintf(s_wx_ft, sizeof(s_wx_ft), "%d\xc2\xb0", wx_vals[1]);
     snprintf(s_wx_d1, sizeof(s_wx_d1), "%d\xc2\xb0", wx_vals[3]);
@@ -584,14 +595,21 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
 
         static char steps_str[16], dist_str[24], hr_str[8];
         {
-            int km   = (int)(s_distance / 1000);
-            int km10 = (int)((s_distance % 1000) / 100);
             snprintf(steps_str, sizeof(steps_str), "%lu stp", (unsigned long)s_steps);
+            const char *dist_suffix = s_use_imperial ? "mi" : "km";
+            int dist_whole, dist_tenths;
+            if (s_use_imperial) {
+                dist_whole  = (int)(s_distance / 1609);
+                dist_tenths = (int)((s_distance % 1609) * 10 / 1609);
+            } else {
+                dist_whole  = (int)(s_distance / 1000);
+                dist_tenths = (int)((s_distance % 1000) / 100);
+            }
             if (s_heart_rate > 0) {
-                snprintf(dist_str, sizeof(dist_str), " | %d.%dkm | ", km, km10);
+                snprintf(dist_str, sizeof(dist_str), " | %d.%d%s | ", dist_whole, dist_tenths, dist_suffix);
                 snprintf(hr_str,   sizeof(hr_str),   "%d", (int)s_heart_rate);
             } else {
-                snprintf(dist_str, sizeof(dist_str), " | %d.%dkm", km, km10);
+                snprintf(dist_str, sizeof(dist_str), " | %d.%d%s", dist_whole, dist_tenths, dist_suffix);
                 hr_str[0] = '\0';
             }
         }
@@ -1071,6 +1089,13 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
         persist_write_int(PERSIST_CAL_FONT_PX, s_cal_font_px);
     }
 
+    Tuple *un = dict_find(iterator, MESSAGE_KEY_UNITS);
+    if (un) {
+        s_use_imperial = (un->value->int32 != 0);
+        persist_write_int(PERSIST_UNITS, s_use_imperial ? 1 : 0);
+        parse_weather_line();  // re-derive cached temp strings in the new unit
+    }
+
     Tuple *bgc = dict_find(iterator, MESSAGE_KEY_BG_COLOR);
     if (bgc) {
         s_bg_color = mono_safe_bg(GColorFromHEX(bgc->value->int32));
@@ -1144,6 +1169,12 @@ static void outbox_failed_callback(DictionaryIterator *iterator,
 // ============================================================================
 
 static void load_persist(void) {
+    // Loaded before the weather-string block below, which calls
+    // parse_weather_line() — that conversion depends on s_use_imperial
+    // already being set, or the first draw after boot would render in the
+    // wrong unit until the next settings save.
+    s_use_imperial = persist_exists(PERSIST_UNITS) ? (persist_read_int(PERSIST_UNITS) != 0) : false;
+
     if (persist_exists(PERSIST_PHONE_BATTERY)) {
         int val = persist_read_int(PERSIST_PHONE_BATTERY);
         if (val > 100) { s_phone_charging = true;  s_phone_battery = val - 100; }

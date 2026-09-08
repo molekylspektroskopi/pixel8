@@ -1,5 +1,14 @@
 # Changelog
 
+## v3.26.0
+- Added an Imperial units option in settings (miles + °F instead of
+  kilometres + °C) for the steps-row distance and all weather temperatures.
+  Conversion happens on-watch from the same Celsius/metric data already
+  cached, using integer-only math — switching units redraws instantly with
+  no re-fetch needed. Contributed by @Artimidorus via the public GitHub
+  repo, re-implemented against the current codebase to keep the build
+  pipeline (settings-page generation, pbw size optimization) intact
+
 ## v3.25.2
 - Three edge-case fixes from a full-codebase review of the v3.25.0
   multi-platform work, all on black & white or round watches:
